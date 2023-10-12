@@ -33,11 +33,11 @@ fn test_max_depth() {
     );
 
     let result = Arc::new(OnceCell::new());
-    let call_tracer = CallTracer::new(result.clone(), HistoryEnabled);
+    let mut call_tracer = CallTracer::new(result.clone(), HistoryEnabled);
     vm.vm.push_transaction(tx);
     let res = vm
         .vm
-        .inspect(vec![Box::new(call_tracer)], VmExecutionMode::OneTx);
+        .inspect(vec![&mut call_tracer], VmExecutionMode::OneTx);
     assert!(result.get().is_some());
     assert!(res.result.is_failed());
 }
@@ -70,11 +70,11 @@ fn test_basic_behavior() {
     );
 
     let result = Arc::new(OnceCell::new());
-    let call_tracer = CallTracer::new(result.clone(), HistoryEnabled);
+    let mut call_tracer = CallTracer::new(result.clone(), HistoryEnabled);
     vm.vm.push_transaction(tx);
     let res = vm
         .vm
-        .inspect(vec![Box::new(call_tracer)], VmExecutionMode::OneTx);
+        .inspect(vec![&mut call_tracer], VmExecutionMode::OneTx);
 
     let call_tracer_result = result.get().unwrap();
 

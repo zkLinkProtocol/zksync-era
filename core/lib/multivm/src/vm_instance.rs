@@ -203,10 +203,20 @@ impl<'a, S: ReadStorage, H: HistoryMode> VmInstance<'a, S, H> {
                     VmExecutionMode::OneTx.glue_into(),
                 )
                 .glue_into(),
-            VmInstanceVersion::VmVirtualBlocksRefundsEnhancement(vm) => vm.inspect(
-                tracers.into_iter().map(|tracer| tracer.latest()).collect(),
-                VmExecutionMode::OneTx,
-            ),
+            VmInstanceVersion::VmVirtualBlocksRefundsEnhancement(vm) => {
+                todo!()
+                // let result = {
+                //     vm.inspect(
+                //         tracers
+                //             .into_iter()
+                //             .map(|mut tracer| tracer.latest().as_mut())
+                //             .collect(),
+                //         VmExecutionMode::OneTx.glue_into(),
+                //     )
+                //     .glue_into()
+                // };
+                // result
+            }
             _ => self.execute_next_transaction(),
         }
     }
@@ -381,12 +391,18 @@ impl<'a, S: ReadStorage, H: HistoryMode> VmInstance<'a, S, H> {
                     with_compression,
                 )
                 .glue_into(),
-            VmInstanceVersion::VmVirtualBlocksRefundsEnhancement(vm) => vm
-                .inspect_transaction_with_bytecode_compression(
-                    tracers.into_iter().map(|tracer| tracer.latest()).collect(),
-                    tx,
-                    with_compression,
-                ),
+            VmInstanceVersion::VmVirtualBlocksRefundsEnhancement(vm) => {
+                todo!()
+            }
+            // vm
+            // .inspect_transaction_with_bytecode_compression(
+            //     tracers
+            //         .into_iter()
+            //         .map(|tracer| &mut tracer.latest())
+            //         .collect(),
+            //     tx,
+            //     with_compression,
+            // ),
             _ => {
                 self.last_tx_compressed_bytecodes = vec![];
                 self.execute_transaction_with_bytecode_compression(tx, with_compression)

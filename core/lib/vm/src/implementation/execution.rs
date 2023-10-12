@@ -5,6 +5,7 @@ use crate::old_vm::{
     history_recorder::HistoryMode,
     utils::{vm_may_have_ended_inner, VmExecutionResult},
 };
+use crate::tracers::traits::TracersList;
 use crate::tracers::{
     traits::{TracerExecutionStatus, VmTracer},
     DefaultExecutionTracer, RefundsTracer,
@@ -16,7 +17,7 @@ use crate::VmExecutionStopReason;
 impl<S: WriteStorage, H: HistoryMode> Vm<S, H> {
     pub(crate) fn inspect_inner(
         &mut self,
-        tracers: Vec<Box<dyn VmTracer<S, H>>>,
+        tracers: TracersList<S, H>,
         execution_mode: VmExecutionMode,
     ) -> VmExecutionResultAndLogs {
         let mut enable_refund_tracer = false;
@@ -34,7 +35,7 @@ impl<S: WriteStorage, H: HistoryMode> Vm<S, H> {
     /// Collect the result from the default tracers.
     fn inspect_and_collect_results(
         &mut self,
-        tracers: Vec<Box<dyn VmTracer<S, H>>>,
+        tracers: TracersList<S, H>,
         execution_mode: VmExecutionMode,
         with_refund_tracer: bool,
     ) -> (VmExecutionStopReason, VmExecutionResultAndLogs) {

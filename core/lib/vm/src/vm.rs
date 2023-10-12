@@ -7,7 +7,7 @@ use crate::old_vm::history_recorder::{HistoryEnabled, HistoryMode};
 
 use crate::bootloader_state::BootloaderState;
 use crate::errors::BytecodeCompressionError;
-use crate::tracers::traits::VmTracer;
+use crate::tracers::traits::TracersList;
 use crate::types::{
     inputs::{L1BatchEnv, SystemEnv, VmExecutionMode},
     internals::{new_vm_state, VmSnapshot, ZkSyncVmState},
@@ -59,7 +59,7 @@ impl<S: WriteStorage, H: HistoryMode> Vm<S, H> {
     /// Execute VM with custom tracers.
     pub fn inspect(
         &mut self,
-        tracers: Vec<Box<dyn VmTracer<S, H>>>,
+        tracers: TracersList<'_, S, H>,
         execution_mode: VmExecutionMode,
     ) -> VmExecutionResultAndLogs {
         self.inspect_inner(tracers, execution_mode)
@@ -119,7 +119,7 @@ impl<S: WriteStorage, H: HistoryMode> Vm<S, H> {
     /// Inspect transaction with optional bytecode compression.
     pub fn inspect_transaction_with_bytecode_compression(
         &mut self,
-        tracers: Vec<Box<dyn VmTracer<S, H>>>,
+        tracers: TracersList<S, H>,
         tx: Transaction,
         with_compression: bool,
     ) -> Result<VmExecutionResultAndLogs, BytecodeCompressionError> {

@@ -17,7 +17,7 @@ use crate::constants::BOOTLOADER_HEAP_PAGE;
 use crate::old_vm::history_recorder::HistoryMode;
 use crate::old_vm::memory::SimpleMemory;
 use crate::tracers::traits::{
-    DynTracer, TracerExecutionStatus, TracerExecutionStopReason, VmTracer,
+    DynTracer, TracerExecutionStatus, TracerExecutionStopReason, TracersList, VmTracer,
 };
 use crate::tracers::utils::{
     computational_gas_price, gas_spent_on_bytecodes_and_long_messages_this_opcode,
@@ -28,7 +28,7 @@ use crate::types::internals::ZkSyncVmState;
 use crate::{Halt, VmExecutionMode, VmExecutionStopReason};
 
 /// Default tracer for the VM. It manages the other tracers execution and stop the vm when needed.
-pub(crate) struct DefaultExecutionTracer<S, H: HistoryMode> {
+pub(crate) struct DefaultExecutionTracer<'a, S, H: HistoryMode> {
     tx_has_been_processed: bool,
     execution_mode: VmExecutionMode,
 
@@ -44,18 +44,18 @@ pub(crate) struct DefaultExecutionTracer<S, H: HistoryMode> {
     // ensures static dispatch, enhancing performance by avoiding dynamic dispatch overhead.
     // Additionally, being an internal tracer, it saves the results directly to VmResultAndLogs.
     pub(crate) refund_tracer: Option<RefundsTracer>,
-    pub(crate) custom_tracers: Vec<Box<dyn VmTracer<S, H>>>,
+    pub(crate) custom_tracers: TracersList<'a, S, H>,
     ret_from_the_bootloader: Option<RetOpcode>,
     storage: StoragePtr<S>,
 }
 
-impl<S, H: HistoryMode> Debug for DefaultExecutionTracer<S, H> {
+impl<S, H: HistoryMode> Debug for DefaultExecutionTracer<'_, S, H> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DefaultExecutionTracer").finish()
     }
 }
 
-impl<S, H: HistoryMode> Tracer for DefaultExecutionTracer<S, H> {
+impl<S, H: HistoryMode> Tracer for DefaultExecutionTracer<'_, S, H> {
     const CALL_BEFORE_DECODING: bool = false;
     const CALL_AFTER_DECODING: bool = true;
     const CALL_BEFORE_EXECUTION: bool = true;
@@ -158,11 +158,11 @@ impl<S, H: HistoryMode> Tracer for DefaultExecutionTracer<S, H> {
     }
 }
 
-impl<S: WriteStorage, H: HistoryMode> DefaultExecutionTracer<S, H> {
+impl<'a, S: WriteStorage, H: HistoryMode> DefaultExecutionTracer<'a, S, H> {
     pub(crate) fn new(
         computational_gas_limit: u32,
         execution_mode: VmExecutionMode,
-        custom_tracers: Vec<Box<dyn VmTracer<S, H>>>,
+        custom_tracers: TracersList<'a, S, H>,
         storage: StoragePtr<S>,
         refund_tracer: Option<RefundsTracer>,
     ) -> Self {
@@ -229,9 +229,9 @@ impl<S: WriteStorage, H: HistoryMode> DefaultExecutionTracer<S, H> {
     }
 }
 
-impl<S, H: HistoryMode> DynTracer<S, H> for DefaultExecutionTracer<S, H> {}
+impl<S, H: HistoryMode> DynTracer<S, H> for DefaultExecutionTracer<'_, S, H> {}
 
-impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for DefaultExecutionTracer<S, H> {
+impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for DefaultExecutionTracer<'_, S, H> {
     fn initialize_tracer(&mut self, state: &mut ZkSyncVmState<S, H>) {
         self.result_tracer.initialize_tracer(state);
         if let Some(refund_tracer) = &mut self.refund_tracer {

@@ -10,6 +10,7 @@ use crate::types::internals::ZkSyncVmState;
 use crate::{Halt, VmExecutionStopReason};
 
 /// Run tracer for collecting data during the vm execution cycles
+#[auto_impl::auto_impl(&mut, Box)]
 pub trait VmTracer<S: WriteStorage, H: HistoryMode>: DynTracer<S, H> {
     /// Initialize the tracer before the vm execution
     fn initialize_tracer(&mut self, _state: &mut ZkSyncVmState<S, H>) {}
@@ -32,6 +33,7 @@ pub trait VmTracer<S: WriteStorage, H: HistoryMode>: DynTracer<S, H> {
 }
 
 /// Version of zk_evm::Tracer suitable for dynamic dispatch.
+#[auto_impl::auto_impl(&mut, Box)]
 pub trait DynTracer<S, H: HistoryMode> {
     fn before_decoding(&mut self, _state: VmLocalStateData<'_>, _memory: &SimpleMemory<H>) {}
     fn after_decoding(
@@ -56,16 +58,6 @@ pub trait DynTracer<S, H: HistoryMode> {
         _memory: &SimpleMemory<H>,
         _storage: StoragePtr<S>,
     ) {
-    }
-}
-
-pub trait BoxedTracer<S, H> {
-    fn into_boxed(self) -> Box<dyn VmTracer<S, H>>;
-}
-
-impl<S: WriteStorage, H: HistoryMode, T: VmTracer<S, H> + 'static> BoxedTracer<S, H> for T {
-    fn into_boxed(self) -> Box<dyn VmTracer<S, H>> {
-        Box::new(self)
     }
 }
 
@@ -100,3 +92,5 @@ impl TracerExecutionStatus {
         }
     }
 }
+
+pub type TracersList<'a, S, H> = Vec<&'a mut dyn VmTracer<S, H>>;

@@ -222,9 +222,9 @@ fn test_layered_rollback() {
 
     vm.vm.push_transaction(loadnext_transaction.clone());
     vm.vm.inspect(
-        vec![Box::new(MaxRecursionTracer {
+        vec![&mut MaxRecursionTracer {
             max_recursion_depth: 15,
-        })],
+        }],
         VmExecutionMode::OneTx,
     );
 
