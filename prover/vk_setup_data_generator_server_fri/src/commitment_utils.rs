@@ -1,9 +1,10 @@
-use crate::get_recursive_layer_vk_for_circuit_type;
 use crate::utils::get_leaf_vk_params;
+use crate::{get_recursive_layer_vk_for_circuit_type, get_snark_vk};
 use anyhow::Context as _;
 use once_cell::sync::Lazy;
 use std::str::FromStr;
 use structopt::lazy_static::lazy_static;
+use zkevm_test_harness::franklin_crypto::bellman::{CurveAffine, PrimeField, PrimeFieldRepr};
 use zkevm_test_harness::witness::recursive_aggregation::{
     compute_leaf_vks_and_params_commitment, compute_node_vk_commitment,
 };
@@ -111,4 +112,52 @@ fn test_get_cached_commitments() {
         H256::zero(),
         commitments.params.recursion_circuits_set_vks_hash
     )
+}
+
+#[test]
+fn test_vk_commitment() {
+    let foo: zksync_types::zkevm_test_harness::bellman::plonk::better_better_cs::setup::VerificationKey<zkevm_test_harness::franklin_crypto::bellman::bn256::Bn256, zksync_types::zkevm_test_harness::abstract_zksync_circuit::concrete_circuits::ZkSyncCircuit<zkevm_test_harness::franklin_crypto::bellman::bn256::Bn256, zksync_types::zkevm_test_harness::witness::oracle::VmWitnessOracle<zkevm_test_harness::franklin_crypto::bellman::bn256::Bn256>>> = get_snark_vk().unwrap();
+
+    let mut res = [0u8; 32 * 2 * 8 + 32 * 2 * 2];
+    let mut writer = &mut res[..];
+
+    assert_eq!(8, foo.gate_setup_commitments.len());
+
+    for gate_setup in foo.gate_setup_commitments {
+        let (x, y) = gate_setup.as_xy();
+        x.into_repr().write_be(&mut writer).unwrap();
+        y.into_repr().write_be(&mut writer).unwrap();
+    }
+
+    assert_eq!(2, foo.gate_selectors_commitments.len());
+
+    for gate_selector in foo.gate_selectors_commitments {
+        let (x, y) = gate_selector.as_xy();
+        x.into_repr().write_be(&mut writer).unwrap();
+        y.into_repr().write_be(&mut writer).unwrap();
+    }
+
+    //let c = zkevm_test_harness::franklin_crypto::bellman::bn256::Bn256::from_repr(a);
+
+    println!("First: {:?}", a);
+    println!("Second: {:?}", b);
+
+    let lookup_table = foo.lookup_table_type_commitment.unwrap();
+    let (a, b) = lookup_table.as_xy();
+    println!("First: {:?}", a);
+    println!("Second: {:?}", b);
+    use tiny_keccak::{Hasher, Keccak};
+    let mut hasher = Keccak::v256();
+
+    let mut writer = &mut res[..];
+
+    a.into_repr().write_be(&mut writer).unwrap();
+    //b.into_repr().write_be(&mut writer).unwrap();
+
+    println!("{:?}", res);
+
+    hasher.update(&res);
+    let mut output = [0u8; 32];
+    hasher.finalize(&mut output);
+    println!("Output is: {:?}", output);
 }
