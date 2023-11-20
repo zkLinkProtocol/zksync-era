@@ -1,5 +1,20 @@
 # Installing dependencies
 
+## TL;DR
+
+```
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+
+sudo apt-get install build-essential pkg-config cmake clang lldb lld libssl-dev postgresql
+
+npm install -g yarn
+yarn set version 1.22.19
+
+cargo install sqlx-cli --version 0.5.13
+```
+
 ## Supported operating systems
 
 zkSync currently can be launched on any \*nix operating system (e.g. any linux distribution or MacOS).
