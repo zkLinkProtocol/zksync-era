@@ -185,7 +185,10 @@ impl JobProcessor for BasicWitnessGenerator {
     const SERVICE_NAME: &'static str = "fri_basic_circuit_witness_generator";
 
     async fn get_next_job(&self) -> anyhow::Result<Option<(Self::JobId, Self::Job)>> {
-        let mut prover_connection = self.prover_connection_pool.access_storage().await.unwrap();
+        let block_number = L1BatchNumber(22);
+        let job = get_artifacts(block_number, &*self.object_store).await;
+        Ok(Some((block_number, job)))
+        /*let mut prover_connection = self.prover_connection_pool.access_storage().await.unwrap();
         let last_l1_batch_to_process = self.config.last_l1_batch_to_process();
         let pod_name = get_current_pod_name();
         match prover_connection
@@ -211,7 +214,7 @@ impl JobProcessor for BasicWitnessGenerator {
                 Ok(Some((block_number, job)))
             }
             None => Ok(None),
-        }
+        }*/
     }
 
     async fn save_failure(&self, job_id: L1BatchNumber, _started_at: Instant, error: String) -> () {
