@@ -190,6 +190,7 @@ impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for RefundsTracer<S> {
         &mut self,
         state: &mut ZkSyncVmState<S, H>,
         bootloader_state: &mut BootloaderState,
+        _storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EncodeLabelValue, EncodeLabelSet)]
         #[metrics(label = "type", rename_all = "snake_case")]

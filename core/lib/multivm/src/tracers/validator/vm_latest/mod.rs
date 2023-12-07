@@ -187,6 +187,7 @@ impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H::VmBoojumIntegration> for Va
         &mut self,
         _state: &mut ZkSyncVmState<S, H::VmBoojumIntegration>,
         _bootloader_state: &mut BootloaderState,
+        _storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         if self.should_stop_execution {
             return TracerExecutionStatus::Stop(TracerExecutionStopReason::Finish);

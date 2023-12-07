@@ -8,6 +8,7 @@ use crate::{
     },
     tracers::storage_invocation::StorageInvocations,
     vm_latest::{BootloaderState, HistoryMode, SimpleMemory, VmTracer, ZkSyncVmState},
+    vm_m5::storage::StoragePtr,
 };
 
 impl<S, H: HistoryMode> DynTracer<S, SimpleMemory<H>> for StorageInvocations {}
@@ -17,6 +18,7 @@ impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for StorageInvocations {
         &mut self,
         state: &mut ZkSyncVmState<S, H>,
         _bootloader_state: &mut BootloaderState,
+        _storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         let current = state
             .storage

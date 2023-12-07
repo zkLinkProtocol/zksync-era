@@ -111,9 +111,11 @@ impl<S: WriteStorage, H: HistoryMode> Vm<S, H> {
                 .cycle(tracer)
                 .expect("Failed execution VM cycle.");
 
-            if let TracerExecutionStatus::Stop(reason) =
-                tracer.finish_cycle(&mut self.state, &mut self.bootloader_state)
-            {
+            if let TracerExecutionStatus::Stop(reason) = tracer.finish_cycle(
+                &mut self.state,
+                &mut self.bootloader_state,
+                self.storage.clone(),
+            ) {
                 break VmExecutionStopReason::TracerRequestedStop(reason);
             }
             if self.has_ended() {

@@ -255,20 +255,23 @@ impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for DefaultExecutionTracer<
         &mut self,
         state: &mut ZkSyncVmState<S, H>,
         bootloader_state: &mut BootloaderState,
+        storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         if self.final_batch_info_requested {
             self.set_fictive_l2_block(state, bootloader_state)
         }
 
-        let mut result = self.result_tracer.finish_cycle(state, bootloader_state);
+        let mut result = self
+            .result_tracer
+            .finish_cycle(state, bootloader_state, storage.clone());
         if let Some(refund_tracer) = &mut self.refund_tracer {
             result = refund_tracer
-                .finish_cycle(state, bootloader_state)
+                .finish_cycle(state, bootloader_state, storage.clone())
                 .stricter(&result);
         }
         result = self
             .dispatcher
-            .finish_cycle(state, bootloader_state)
+            .finish_cycle(state, bootloader_state, storage.clone())
             .stricter(&result);
         result.stricter(&self.should_stop_execution())
     }

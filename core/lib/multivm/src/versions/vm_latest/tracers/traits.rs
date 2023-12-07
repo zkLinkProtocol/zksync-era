@@ -1,4 +1,4 @@
-use zksync_state::WriteStorage;
+use zksync_state::{StoragePtr, WriteStorage};
 
 use crate::{
     interface::{
@@ -23,6 +23,7 @@ pub trait VmTracer<S: WriteStorage, H: HistoryMode>: DynTracer<S, SimpleMemory<H
         &mut self,
         _state: &mut ZkSyncVmState<S, H>,
         _bootloader_state: &mut BootloaderState,
+        _storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         TracerExecutionStatus::Continue
     }

@@ -1,4 +1,4 @@
-use zksync_state::WriteStorage;
+use zksync_state::{StoragePtr, WriteStorage};
 
 use crate::{
     interface::{
@@ -17,6 +17,7 @@ impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for StorageInvocations {
         &mut self,
         state: &mut ZkSyncVmState<S, H>,
         _bootloader_state: &mut BootloaderState,
+        _storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         let current = state
             .storage

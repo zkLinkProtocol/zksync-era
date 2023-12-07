@@ -164,6 +164,7 @@ impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for MaxRecursionTracer {
         &mut self,
         state: &mut ZkSyncVmState<S, H>,
         _bootloader_state: &mut BootloaderState,
+        storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         let current_depth = state.local_state.callstack.depth();
 

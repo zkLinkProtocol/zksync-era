@@ -178,6 +178,7 @@ impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for PubdataTracer<S> {
         &mut self,
         state: &mut ZkSyncVmState<S, H>,
         bootloader_state: &mut BootloaderState,
+        _storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         if !matches!(self.execution_mode, VmExecutionMode::Batch) {
             // We do not provide the pubdata when executing the block tip or a single transaction

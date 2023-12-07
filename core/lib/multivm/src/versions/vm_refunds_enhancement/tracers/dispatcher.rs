@@ -104,10 +104,12 @@ impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for TracerDispatcher<S, H> 
         &mut self,
         _state: &mut ZkSyncVmState<S, H>,
         _bootloader_state: &mut BootloaderState,
+        storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         let mut result = TracerExecutionStatus::Continue;
         for tracer in self.tracers.iter_mut() {
-            result = result.stricter(&tracer.finish_cycle(_state, _bootloader_state));
+            result =
+                result.stricter(&tracer.finish_cycle(_state, _bootloader_state, storage.clone()));
         }
         result
     }

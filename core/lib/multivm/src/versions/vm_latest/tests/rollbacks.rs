@@ -1,6 +1,6 @@
 use ethabi::Token;
 use zksync_contracts::{get_loadnext_contract, test_contracts::LoadnextContractExecutionParams};
-use zksync_state::WriteStorage;
+use zksync_state::{StoragePtr, WriteStorage};
 use zksync_types::{get_nonce_key, Execute, U256};
 
 use crate::{
@@ -166,6 +166,7 @@ impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for MaxRecursionTracer {
         &mut self,
         state: &mut ZkSyncVmState<S, H>,
         _bootloader_state: &mut BootloaderState,
+        _storage: StoragePtr<S>,
     ) -> TracerExecutionStatus {
         let current_depth = state.local_state.callstack.depth();
 
