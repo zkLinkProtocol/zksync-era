@@ -15,8 +15,9 @@ use crate::{
     interface::{
         dyn_tracers::vm_1_3_3::DynTracer,
         tracer::{TracerExecutionStatus, TracerExecutionStopReason, VmExecutionStopReason},
-        Halt, VmExecutionMode,
+        Halt, L1BatchEnv, VmExecutionMode,
     },
+    vm_latest::SystemEnv,
     vm_refunds_enhancement::{
         bootloader_state::{utils::apply_l2_block, BootloaderState},
         constants::BOOTLOADER_HEAP_PAGE,
@@ -243,12 +244,19 @@ impl<S: WriteStorage, H: HistoryMode> DynTracer<S, SimpleMemory<H>>
 }
 
 impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for DefaultExecutionTracer<S, H> {
-    fn initialize_tracer(&mut self, state: &mut ZkSyncVmState<S, H>) {
-        self.result_tracer.initialize_tracer(state);
+    fn initialize_tracer(
+        &mut self,
+        state: &mut ZkSyncVmState<S, H>,
+        l1_batch_env: &L1BatchEnv,
+        system_env: &SystemEnv,
+    ) {
+        self.result_tracer
+            .initialize_tracer(state, l1_batch_env, system_env);
         if let Some(refund_tracer) = &mut self.refund_tracer {
-            refund_tracer.initialize_tracer(state);
+            refund_tracer.initialize_tracer(state, l1_batch_env, system_env);
         }
-        self.dispatcher.initialize_tracer(state);
+        self.dispatcher
+            .initialize_tracer(state, l1_batch_env, system_env);
     }
 
     fn finish_cycle(

@@ -4,6 +4,7 @@ use crate::{
     interface::{
         dyn_tracers::vm_1_3_3::DynTracer,
         tracer::{TracerExecutionStatus, VmExecutionStopReason},
+        L1BatchEnv, SystemEnv,
     },
     vm_refunds_enhancement::{
         bootloader_state::BootloaderState,
@@ -17,7 +18,14 @@ pub type TracerPointer<S, H> = Box<dyn VmTracer<S, H>>;
 /// Run tracer for collecting data during the vm execution cycles
 pub trait VmTracer<S: WriteStorage, H: HistoryMode>: DynTracer<S, SimpleMemory<H>> {
     /// Initialize the tracer before the vm execution
-    fn initialize_tracer(&mut self, _state: &mut ZkSyncVmState<S, H>) {}
+    fn initialize_tracer(
+        &mut self,
+        _state: &mut ZkSyncVmState<S, H>,
+        _l1_batch_env: &L1BatchEnv,
+        _system_env: &SystemEnv,
+    ) {
+    }
+
     /// Run after each vm execution cycle
     fn finish_cycle(
         &mut self,

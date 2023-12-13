@@ -7,6 +7,7 @@ use crate::{
     interface::{
         dyn_tracers::vm_1_3_3::DynTracer,
         tracer::{TracerExecutionStatus, VmExecutionStopReason},
+        L1BatchEnv, SystemEnv,
     },
     vm_refunds_enhancement::{
         BootloaderState, HistoryMode, SimpleMemory, TracerPointer, VmTracer, ZkSyncVmState,
@@ -92,9 +93,14 @@ impl<S: WriteStorage, H: HistoryMode> DynTracer<S, SimpleMemory<H>> for TracerDi
 }
 
 impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for TracerDispatcher<S, H> {
-    fn initialize_tracer(&mut self, _state: &mut ZkSyncVmState<S, H>) {
+    fn initialize_tracer(
+        &mut self,
+        state: &mut ZkSyncVmState<S, H>,
+        l1_batch_env: &L1BatchEnv,
+        system_env: &SystemEnv,
+    ) {
         for tracer in self.tracers.iter_mut() {
-            tracer.initialize_tracer(_state);
+            tracer.initialize_tracer(state, l1_batch_env, system_env);
         }
     }
 

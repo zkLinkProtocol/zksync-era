@@ -97,7 +97,7 @@ impl<S: WriteStorage, H: HistoryMode> Vm<S, H> {
         &mut self,
         tracer: &mut DefaultExecutionTracer<S, H::VmVirtualBlocksRefundsEnhancement>,
     ) -> VmExecutionStopReason {
-        tracer.initialize_tracer(&mut self.state);
+        tracer.initialize_tracer(&mut self.state, &self.batch_env, &self.system_env);
         let result = loop {
             // Sanity check: we should never reach the maximum value, because then we won't be able to process the next cycle.
             assert_ne!(
