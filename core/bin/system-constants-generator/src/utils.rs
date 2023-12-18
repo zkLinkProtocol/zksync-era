@@ -39,7 +39,12 @@ struct SpecialBootloaderTracer {
 impl<S: WriteStorage, H: HistoryMode> DynTracer<S, SimpleMemory<H>> for SpecialBootloaderTracer {}
 
 impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for SpecialBootloaderTracer {
-    fn initialize_tracer(&mut self, state: &mut ZkSyncVmState<S, H>) {
+    fn initialize_tracer(
+        &mut self,
+        state: &mut ZkSyncVmState<S, H>,
+        _l1_batch_env: &L1BatchEnv,
+        _system_env: &SystemEnv,
+    ) {
         state.memory.populate_page(
             BOOTLOADER_HEAP_PAGE as usize,
             self.input.clone(),

@@ -18,7 +18,7 @@ use zksync_utils::{bytecode::bytecode_len_in_bytes, ceil_div_u256, u256_to_h256}
 use crate::{
     interface::{
         traits::tracers::dyn_tracers::vm_1_4_0::DynTracer, types::tracer::TracerExecutionStatus,
-        L1BatchEnv, Refunds,
+        L1BatchEnv, Refunds, SystemEnv,
     },
     vm_latest::{
         bootloader_state::BootloaderState,
@@ -180,7 +180,12 @@ impl<S, H: HistoryMode> DynTracer<S, SimpleMemory<H>> for RefundsTracer<S> {
 }
 
 impl<S: WriteStorage, H: HistoryMode> VmTracer<S, H> for RefundsTracer<S> {
-    fn initialize_tracer(&mut self, state: &mut ZkSyncVmState<S, H>) {
+    fn initialize_tracer(
+        &mut self,
+        state: &mut ZkSyncVmState<S, H>,
+        _l1_batch_env: &L1BatchEnv,
+        _system_env: &SystemEnv,
+    ) {
         self.timestamp_initial = Timestamp(state.local_state.timestamp);
         self.gas_remaining_before = state.local_state.callstack.current.ergs_remaining;
         self.spent_pubdata_counter_before = state.local_state.spent_pubdata_counter;

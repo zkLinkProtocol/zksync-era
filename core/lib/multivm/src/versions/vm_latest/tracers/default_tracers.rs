@@ -20,7 +20,7 @@ use crate::{
         tracer::{TracerExecutionStopReason, VmExecutionStopReason},
         traits::tracers::dyn_tracers::vm_1_4_0::DynTracer,
         types::tracer::TracerExecutionStatus,
-        Halt, VmExecutionMode,
+        Halt, L1BatchEnv, SystemEnv, VmExecutionMode,
     },
     vm_latest::{
         bootloader_state::{utils::apply_l2_block, BootloaderState},
@@ -249,8 +249,13 @@ impl<S: WriteStorage, H: HistoryMode> Tracer for DefaultExecutionTracer<S, H> {
 }
 
 impl<S: WriteStorage, H: HistoryMode> DefaultExecutionTracer<S, H> {
-    pub(crate) fn initialize_tracer(&mut self, state: &mut ZkSyncVmState<S, H>) {
-        dispatch_tracers!(self.initialize_tracer(state));
+    pub(crate) fn initialize_tracer(
+        &mut self,
+        state: &mut ZkSyncVmState<S, H>,
+        _l1_batch_env: &L1BatchEnv,
+        _system_env: &SystemEnv,
+    ) {
+        dispatch_tracers!(self.initialize_tracer(state, _l1_batch_env, _system_env));
     }
 
     pub(crate) fn finish_cycle(
