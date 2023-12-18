@@ -49,7 +49,7 @@ pub struct BootloaderState {
 }
 
 impl BootloaderState {
-    pub(crate) fn new(
+    pub fn new(
         execution_mode: TxExecutionMode,
         initial_memory: BootloaderMemory,
         first_l2_block: L2BlockEnv,
@@ -187,7 +187,7 @@ impl BootloaderState {
         l2_block.first_tx_index + l2_block.txs.len()
     }
 
-    pub(crate) fn get_last_tx_compressed_bytecodes(&self) -> Vec<CompressedBytecodeInfo> {
+    pub fn get_last_tx_compressed_bytecodes(&self) -> Vec<CompressedBytecodeInfo> {
         if let Some(tx) = self.last_l2_block().txs.last() {
             tx.compressed_bytecodes.clone()
         } else {

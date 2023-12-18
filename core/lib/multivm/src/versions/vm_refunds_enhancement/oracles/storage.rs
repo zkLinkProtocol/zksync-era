@@ -396,7 +396,7 @@ impl<S: WriteStorage, H: HistoryMode> VmStorageOracle for StorageOracle<S, H> {
                 // Additional validation that the current value was correct
                 // Unwrap is safe because the return value from write_inner is the previous value in this leaf.
                 // It is impossible to set leaf value to `None`
-                // assert_eq!(current_value, written_value);
+                assert_eq!(current_value, written_value);
             }
 
             self.frames_stack

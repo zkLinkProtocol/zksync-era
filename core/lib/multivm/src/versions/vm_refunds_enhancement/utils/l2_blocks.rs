@@ -22,14 +22,14 @@ pub(crate) fn get_l2_block_hash_key(block_number: u32) -> StorageKey {
 }
 
 pub(crate) fn assert_next_block(prev_block: &L2Block, next_block: &L2BlockEnv) {
-    // if prev_block.number == 0 {
-    //     // Special case for the first block it can have the same timestamp as the previous block.
-    //     assert!(prev_block.timestamp <= next_block.timestamp);
-    // } else {
-    //     assert_eq!(prev_block.number + 1, next_block.number);
-    //     assert!(prev_block.timestamp < next_block.timestamp);
-    // }
-    // assert_eq!(prev_block.hash, next_block.prev_block_hash);
+    if prev_block.number == 0 {
+        // Special case for the first block it can have the same timestamp as the previous block.
+        assert!(prev_block.timestamp <= next_block.timestamp);
+    } else {
+        assert_eq!(prev_block.number + 1, next_block.number);
+        assert!(prev_block.timestamp < next_block.timestamp);
+    }
+    assert_eq!(prev_block.hash, next_block.prev_block_hash);
 }
 
 /// Returns the hash of the l2_block.
