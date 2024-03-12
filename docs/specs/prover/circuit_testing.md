@@ -29,7 +29,7 @@ gates and gate placement strategy, which will be useful for setting up the const
 
 ![Contest(6).png](<./img/circuit_testing/Contest(6).png>)
 
-The constaint system is almost ready! We still need to add the lookup tables for common boolean functions:
+The constraint system is almost ready! We still need to add the lookup tables for common boolean functions:
 
 ![Contest(7).png](<./img/circuit_testing/Contest(7).png>)
 
@@ -38,7 +38,7 @@ Now the constraint system is ready! We can start the main part of the test!
 ![Contest(8).png](<./img/circuit_testing/Contest(8).png>)
 
 Here we have hard coded a secret key with its associated public key, and generate a signature. We will test our circuit
-on these inputs! Next we “allocate” these inputs as witnessess:
+on these inputs! Next we “allocate” these inputs as witnesses:
 
 ![Contest(9).png](<./img/circuit_testing/Contest(9).png>)
 
