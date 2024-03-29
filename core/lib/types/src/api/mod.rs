@@ -670,6 +670,12 @@ pub struct BlockDetailsBase {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct BatchAvailableOnChainData {
+    pub data: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BlockDetails {
     pub number: MiniblockNumber,
     pub l1_batch_number: L1BatchNumber,
