@@ -360,11 +360,12 @@ impl EthTxAggregator {
         {
             if if let AggregatedOperation::Execute(ref op) = agg_op {
                 let is_synced = self.is_batches_synced(op).await?;
+                let is_data_available = self.is_batch_data_available(op).await?;
                 tracing::info!(
-                    "Queried Batches[{:?}] syncing status: {is_synced}",
+                    "Queried Batches[{:?}] syncing status: {is_synced}, data_available: {is_data_available}",
                     op.l1_batch_range()
                 );
-                is_synced
+                is_synced && is_data_available
             } else {
                 true
             } {
@@ -408,6 +409,22 @@ impl EthTxAggregator {
             .await?
             .as_u64();
         Ok((latest_block_number.saturating_sub(CONFIRMATIONS) as u32).into())
+    }
+
+    async fn is_batch_data_available(&self, op: &L1BatchExecuteOperation) -> Result<bool, Error> {
+        let is_batch_data_available = &*self.functions.is_batch_data_available.name;
+
+        let params = op.get_eth_tx_args().pop().unwrap();
+        let args = CallFunctionArgs::new(is_batch_data_available, params).for_contract(
+            self.main_zksync_contract_address,
+            self.functions.zksync_contract.clone(),
+        );
+        let res_tokens = self
+            .eth_client
+            .call_contract_function(args)
+            .await
+            .map_err(|e| Error::InvalidOutputType(e.to_string()))?;
+        bool::from_tokens(res_tokens)
     }
 
     async fn report_eth_tx_saving(
