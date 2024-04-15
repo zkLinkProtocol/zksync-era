@@ -37,14 +37,14 @@ impl Aggregator {
                     op: AggregatedActionType::Commit,
                     limit: config.max_aggregated_blocks_to_commit,
                 }),
-                Box::from(GasCriterion::new(
-                    AggregatedActionType::Commit,
-                    config.max_aggregated_tx_gas,
-                )),
-                Box::from(DataSizeCriterion {
-                    op: AggregatedActionType::Commit,
-                    data_limit: config.max_eth_tx_data_size,
-                }),
+                // Box::from(GasCriterion::new(
+                //     AggregatedActionType::Commit,
+                //     config.max_aggregated_tx_gas,
+                // )),
+                // Box::from(DataSizeCriterion {
+                //     op: AggregatedActionType::Commit,
+                //     data_limit: config.max_eth_tx_data_size,
+                // }),
                 Box::from(TimestampDeadlineCriterion {
                     op: AggregatedActionType::Commit,
                     deadline_seconds: config.aggregated_block_commit_deadline,
