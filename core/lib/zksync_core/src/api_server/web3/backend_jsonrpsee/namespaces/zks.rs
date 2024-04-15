@@ -11,6 +11,7 @@ use zksync_types::{
     transaction_request::CallRequest,
     Address, L1BatchNumber, MiniblockNumber, H256, U256, U64,
 };
+use zksync_types::api::BatchAvailableOnChainData;
 use zksync_web3_decl::{
     jsonrpsee::core::{async_trait, RpcResult},
     namespaces::zks::ZksNamespaceServer,
@@ -165,6 +166,15 @@ impl ZksNamespaceServer for ZksNamespace {
         l1_batch_number: L1BatchNumber,
     ) -> RpcResult<Proof> {
         self.get_proofs_impl(address, keys, l1_batch_number)
+            .await
+            .map_err(into_jsrpc_error)
+    }
+
+    async fn get_batch_available_on_chain_data(
+        &self,
+        l1_batch_number: L1BatchNumber,
+    ) -> RpcResult<Option<BatchAvailableOnChainData>> {
+        self.get_batch_available_on_chain_data(l1_batch_number)
             .await
             .map_err(into_jsrpc_error)
     }

@@ -12,6 +12,7 @@ use zksync_types::{
     transaction_request::CallRequest,
     Address, L1BatchNumber, MiniblockNumber, H256, U256, U64,
 };
+use zksync_types::api::BatchAvailableOnChainData;
 
 use crate::types::Token;
 
@@ -118,4 +119,10 @@ pub trait ZksNamespace {
         keys: Vec<H256>,
         l1_batch_number: L1BatchNumber,
     ) -> RpcResult<Proof>;
+
+    #[method(name = "getL1BatchDA")]
+    async fn get_batch_available_on_chain_data(
+        &self,
+        l1_batch_number: L1BatchNumber,
+    ) -> RpcResult<Option<BatchAvailableOnChainData>>;
 }
