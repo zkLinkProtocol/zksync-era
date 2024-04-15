@@ -4,7 +4,7 @@ set -e
 
 # install zksolc 1.3.x
 skip_versions="v1.3.12 v1.3.15 v1.3.20" && \
-    for VERSION in $(seq -f "v1.3.%g" 0 22); do \
+    for VERSION in $(seq -f "v1.3.%g" 0 23); do \
     if echo " $skip_versions " | grep -q -w " $VERSION "; then \
     continue; \
     fi; \
