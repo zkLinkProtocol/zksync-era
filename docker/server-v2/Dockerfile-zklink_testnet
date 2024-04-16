@@ -2,12 +2,17 @@
 # syntax=docker/dockerfile:experimental
 FROM debian:bookworm-slim as builder
 
-WORKDIR /usr/src/zksync
-COPY . .
-
 RUN apt-get update && apt-get install -y curl clang openssl libssl-dev gcc g++ \
-    pkg-config build-essential libclang-dev linux-libc-dev liburing-dev && \
+    pkg-config build-essential libclang-dev linux-libc-dev liburing-dev git && \
     rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y nodejs npm && npm install --global yarn
+
+RUN cd /usr/src && git clone https://github.com/zkLinkProtocol/zksync-era.git && cd zksync-era && git checkout -b zklink_testnet origin/zklink_testnet && git pull origin zklink_testnet && git submodule update --init --recursive
+
+RUN cd /usr/src && mv zksync-era zksync && cd zksync
+
+WORKDIR /usr/src/zksync
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
@@ -17,15 +22,11 @@ RUN curl https://sh.rustup.rs -sSf | bash -s -- -y && \
     rustup install nightly-2023-08-21 && \
     rustup default nightly-2023-08-21
 
-RUN apt-get update && apt-get install -y nodejs npm git && npm install --global yarn
-
 ENV ZKSYNC_HOME=/usr/src/zksync
 
-RUN git submodule update --init --recursive 
-
-RUN     zk && \
+RUN zk && \
         zk compiler system-contracts && \
-        zk contract build 
+        zk contract build
 
 RUN cargo build --release --features=rocksdb/io-uring
 
