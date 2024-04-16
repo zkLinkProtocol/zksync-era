@@ -8,25 +8,27 @@ RUN apt-get update && apt-get install -y curl clang openssl libssl-dev gcc g++ \
 
 RUN apt-get update && apt-get install -y nodejs npm && npm install --global yarn
 
-RUN cd /usr/src && git clone https://github.com/zkLinkProtocol/zksync-era.git && cd zksync-era && git checkout -b zklink_testnet origin/zklink_testnet && git pull origin zklink_testnet && git submodule update --init --recursive
-
-RUN cd /usr/src && mv zksync-era zksync && cd zksync
+RUN cd /usr/src && \
+    git clone https://github.com/zkLinkProtocol/zksync-era.git zksync && \
+    cd zksync && \
+    git checkout -b zklink_testnet origin/zklink_testnet && \
+    git pull origin zklink_testnet && \
+    git submodule update --init --recursive
 
 WORKDIR /usr/src/zksync
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:/usr/src/zksync/bin:$PATH
+    PATH=/usr/local/cargo/bin:/usr/src/zksync/bin:$PATH \
+    ZKSYNC_HOME=/usr/src/zksync
 
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y && \
     rustup install nightly-2023-08-21 && \
     rustup default nightly-2023-08-21
 
-ENV ZKSYNC_HOME=/usr/src/zksync
-
 RUN zk && \
-        zk compiler system-contracts && \
-        zk contract build
+    zk compiler system-contracts && \
+    zk contract build
 
 RUN cargo build --release --features=rocksdb/io-uring
 
