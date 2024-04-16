@@ -18,7 +18,7 @@ WORKDIR /usr/src/zksync
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:$PATH \
+    PATH=/usr/local/cargo/bin:/usr/src/zksync/bin:$PATH \
     ZKSYNC_HOME=/usr/src/zksync
 
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y && \
