@@ -6,8 +6,8 @@ use zksync_mini_merkle_tree::MiniMerkleTree;
 use zksync_system_constants::DEFAULT_L2_TX_GAS_PER_PUBDATA_BYTE;
 use zksync_types::{
     api::{
-        BlockDetails, BridgeAddresses, GetLogsFilter, L1BatchDetails, L2ToL1LogProof, Proof,
-        ProtocolVersion, StorageProof, TransactionDetails, BatchAvailableOnChainData
+        BatchAvailableOnChainData, BlockDetails, BridgeAddresses, GetLogsFilter, L1BatchDetails,
+        L2ToL1LogProof, Proof, ProtocolVersion, StorageProof, TransactionDetails,
     },
     fee::Fee,
     fee_model::FeeParams,
@@ -660,14 +660,13 @@ impl ZksNamespace {
             .map_err(|err| internal_error(METHOD_NAME, err))?;
 
         method_latency.observe();
-        Ok(l1_batch.map(|batch|
-            BatchAvailableOnChainData {
-                data: batch
-                    .header
-                    .pubdata_input
-                    .clone()
-                    .unwrap_or(batch.construct_pubdata())
-            }
-        ))
+        Ok(l1_batch.map(|batch| BatchAvailableOnChainData {
+            data: batch
+                .header
+                .pubdata_input
+                .clone()
+                .unwrap_or(batch.construct_pubdata())
+                .into(),
+        }))
     }
 }
