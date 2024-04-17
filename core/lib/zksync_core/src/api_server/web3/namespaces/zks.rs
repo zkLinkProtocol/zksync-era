@@ -667,6 +667,7 @@ impl ZksNamespace {
                     .pubdata_input
                     .clone()
                     .unwrap_or(batch.construct_pubdata())
+                    .into()
             }
         ))
     }
