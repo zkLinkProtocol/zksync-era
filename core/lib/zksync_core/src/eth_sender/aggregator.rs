@@ -16,8 +16,7 @@ use zksync_types::{
 };
 
 use super::publish_criterion::{
-    DataSizeCriterion, GasCriterion, L1BatchPublishCriterion, NumberCriterion,
-    TimestampDeadlineCriterion,
+    GasCriterion, L1BatchPublishCriterion, NumberCriterion, TimestampDeadlineCriterion,
 };
 
 #[derive(Debug)]

@@ -671,7 +671,7 @@ pub struct BlockDetailsBase {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BatchAvailableOnChainData {
-    pub data: Vec<u8>,
+    pub data: Bytes,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
