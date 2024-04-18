@@ -3,15 +3,14 @@ use std::collections::HashMap;
 use bigdecimal::BigDecimal;
 use zksync_types::{
     api::{
-        BlockDetails, BridgeAddresses, L1BatchDetails, L2ToL1LogProof, Proof, ProtocolVersion,
-        TransactionDetails,
+        BatchAvailableOnChainData, BlockDetails, BridgeAddresses, L1BatchDetails, L2ToL1LogProof,
+        Proof, ProtocolVersion, TransactionDetails,
     },
     fee::Fee,
     fee_model::FeeParams,
     transaction_request::CallRequest,
     Address, L1BatchNumber, MiniblockNumber, H256, U256, U64,
 };
-use zksync_types::api::BatchAvailableOnChainData;
 use zksync_web3_decl::{
     jsonrpsee::core::{async_trait, RpcResult},
     namespaces::zks::ZksNamespaceServer,
