@@ -4,7 +4,8 @@ use tokio::sync::watch;
 use zksync_config::configs::eth_sender::SenderConfig;
 use zksync_contracts::BaseSystemContractsHashes;
 use zksync_dal::{ConnectionPool, StorageProcessor};
-use zksync_eth_client::{BoundEthInterface, CallFunctionArgs};
+use zksync_eth_client::{BoundEthInterface, CallFunctionArgs, EthInterface};
+use zksync_types::web3::types::{BlockId, BlockNumber};
 use zksync_types::{
     aggregated_operations::{AggregatedOperation, L1BatchExecuteOperation},
     contracts::{Multicall3Call, Multicall3Result},
@@ -16,9 +17,10 @@ use zksync_types::{
         tokens::{Detokenize, Tokenizable},
         Error,
     },
-    Address, ProtocolVersionId, H256, U256,
+    Address, ProtocolVersionId, H256, U256, U64,
 };
 
+use crate::eth_sender::eth_tx_manager::L1BlockNumbers;
 use crate::{
     eth_sender::{
         metrics::{PubdataKind, METRICS},
@@ -375,20 +377,54 @@ impl EthTxAggregator {
         Ok(())
     }
 
-    async fn is_batches_synced(&self, op: &L1BatchExecuteOperation) -> Result<bool, Error> {
+    async fn is_batches_synced(
+        &self,
+        op: &L1BatchExecuteOperation,
+    ) -> Result<bool, ETHSenderError> {
         let is_batches_synced = &*self.functions.is_batches_synced.name;
 
         let params = op.get_eth_tx_args().pop().unwrap();
-        let args = CallFunctionArgs::new(is_batches_synced, params).for_contract(
-            self.main_zksync_contract_address,
-            self.functions.zksync_contract.clone(),
-        );
+        let block_number = self.get_l1_block_numbers().await?;
+        let args = CallFunctionArgs::new(is_batches_synced, params)
+            .with_block(BlockId::from(U64::from(block_number.finalized.0)))
+            .for_contract(
+                self.main_zksync_contract_address,
+                self.functions.zksync_contract.clone(),
+            );
         let res_tokens = self
             .eth_client
             .call_contract_function(args)
             .await
             .map_err(|e| Error::InvalidOutputType(e.to_string()))?;
-        bool::from_tokens(res_tokens)
+        Ok(bool::from_tokens(res_tokens)?)
+    }
+
+    async fn get_l1_block_numbers(&self) -> Result<L1BlockNumbers, ETHSenderError> {
+        let finalized = if let Some(confirmations) = self.config.wait_confirmations {
+            let latest_block_number = self
+                .eth_client
+                .block_number("eth_tx_aggregator")
+                .await?
+                .as_u64();
+            (latest_block_number.saturating_sub(confirmations) as u32).into()
+        } else {
+            self.eth_client
+                .block(BlockId::Number(BlockNumber::Finalized), "eth_tx_aggregator")
+                .await?
+                .expect("Finalized block must be present on L1")
+                .number
+                .expect("Finalized block must contain number")
+                .as_u32()
+                .into()
+        };
+
+        let latest = self
+            .eth_client
+            .block_number("eth_tx_aggregator")
+            .await?
+            .as_u32()
+            .into();
+        Ok(L1BlockNumbers { finalized, latest })
     }
 
     async fn report_eth_tx_saving(
