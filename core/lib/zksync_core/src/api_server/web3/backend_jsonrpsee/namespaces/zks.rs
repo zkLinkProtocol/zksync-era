@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bigdecimal::BigDecimal;
+use zksync_types::api::BatchAvailableOnChainData;
 use zksync_types::{
     api::{
         BlockDetails, BridgeAddresses, L1BatchDetails, L2ToL1LogProof, Proof, ProtocolVersion,
@@ -165,6 +166,15 @@ impl ZksNamespaceServer for ZksNamespace {
         l1_batch_number: L1BatchNumber,
     ) -> RpcResult<Proof> {
         self.get_proofs_impl(address, keys, l1_batch_number)
+            .await
+            .map_err(into_jsrpc_error)
+    }
+
+    async fn get_batch_available_on_chain_data(
+        &self,
+        l1_batch_number: L1BatchNumber,
+    ) -> RpcResult<Option<BatchAvailableOnChainData>> {
+        self.get_batch_available_on_chain_data(l1_batch_number)
             .await
             .map_err(into_jsrpc_error)
     }

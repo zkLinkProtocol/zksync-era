@@ -6,8 +6,8 @@ use zksync_mini_merkle_tree::MiniMerkleTree;
 use zksync_system_constants::DEFAULT_L2_TX_GAS_PER_PUBDATA_BYTE;
 use zksync_types::{
     api::{
-        BlockDetails, BridgeAddresses, GetLogsFilter, L1BatchDetails, L2ToL1LogProof, Proof,
-        ProtocolVersion, StorageProof, TransactionDetails,
+        BatchAvailableOnChainData, BlockDetails, BridgeAddresses, GetLogsFilter, L1BatchDetails,
+        L2ToL1LogProof, Proof, ProtocolVersion, StorageProof, TransactionDetails,
     },
     fee::Fee,
     fee_model::FeeParams,
@@ -641,5 +641,32 @@ impl ZksNamespace {
             address,
             storage_proof,
         })
+    }
+
+    #[tracing::instrument(skip_all)]
+    pub async fn get_batch_available_on_chain_data(
+        &self,
+        l1_batch_number: L1BatchNumber,
+    ) -> Result<Option<BatchAvailableOnChainData>, Web3Error> {
+        const METHOD_NAME: &str = "get_batch_available_on_chain_data";
+
+        let method_latency = API_METRICS.start_call(METHOD_NAME);
+        self.state.start_info.ensure_not_pruned(l1_batch_number)?;
+        let mut storage = self.access_storage(METHOD_NAME).await?;
+        let l1_batch = storage
+            .blocks_dal()
+            .get_l1_batch_metadata(l1_batch_number)
+            .await
+            .map_err(|err| internal_error(METHOD_NAME, err))?;
+
+        method_latency.observe();
+        Ok(l1_batch.map(|batch| BatchAvailableOnChainData {
+            data: batch
+                .header
+                .pubdata_input
+                .clone()
+                .unwrap_or(batch.construct_pubdata())
+                .into(),
+        }))
     }
 }
