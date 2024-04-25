@@ -230,8 +230,8 @@ impl L1BatchWithMetadata {
                 Token::Bytes(self.metadata.l2_l1_messages_compressed.clone()),
                 // `totalL2ToL1Pubdata`
                 Token::FixedBytes(
-                    keccak256(
-                        &self
+                    zkevm_test_harness_1_4_1::witness::individual_circuits::data_hasher_and_merklizer::create_celestia_commitment_for_data(
+                        self
                             .header
                             .pubdata_input
                             .clone()
