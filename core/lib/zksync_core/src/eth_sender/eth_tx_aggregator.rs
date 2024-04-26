@@ -5,7 +5,7 @@ use zksync_config::configs::eth_sender::SenderConfig;
 use zksync_contracts::BaseSystemContractsHashes;
 use zksync_dal::{ConnectionPool, StorageProcessor};
 use zksync_eth_client::{BoundEthInterface, CallFunctionArgs, EthInterface};
-use zksync_types::web3::types::{BlockId, BlockNumber};
+use zksync_types::web3::types::BlockId;
 use zksync_types::{
     aggregated_operations::{AggregatedOperation, L1BatchExecuteOperation},
     contracts::{Multicall3Call, Multicall3Result},
@@ -17,10 +17,9 @@ use zksync_types::{
         tokens::{Detokenize, Tokenizable},
         Error,
     },
-    Address, ProtocolVersionId, H256, U256, U64,
+    Address, L1BlockNumber, ProtocolVersionId, H256, U256, U64,
 };
 
-use crate::eth_sender::eth_tx_manager::L1BlockNumbers;
 use crate::{
     eth_sender::{
         metrics::{PubdataKind, METRICS},
@@ -384,9 +383,9 @@ impl EthTxAggregator {
         let is_batches_synced = &*self.functions.is_batches_synced.name;
 
         let params = op.get_eth_tx_args().pop().unwrap();
-        let block_number = self.get_l1_block_numbers().await?;
+        let block_number = self.finalized_l1_block_numbers().await?;
         let args = CallFunctionArgs::new(is_batches_synced, params)
-            .with_block(BlockId::from(U64::from(block_number.finalized.0)))
+            .with_block(BlockId::from(U64::from(block_number.0)))
             .for_contract(
                 self.main_zksync_contract_address,
                 self.functions.zksync_contract.clone(),
@@ -399,32 +398,15 @@ impl EthTxAggregator {
         Ok(bool::from_tokens(res_tokens)?)
     }
 
-    async fn get_l1_block_numbers(&self) -> Result<L1BlockNumbers, ETHSenderError> {
-        let finalized = if let Some(confirmations) = self.config.wait_confirmations {
-            let latest_block_number = self
-                .eth_client
-                .block_number("eth_tx_aggregator")
-                .await?
-                .as_u64();
-            (latest_block_number.saturating_sub(confirmations) as u32).into()
-        } else {
-            self.eth_client
-                .block(BlockId::Number(BlockNumber::Finalized), "eth_tx_aggregator")
-                .await?
-                .expect("Finalized block must be present on L1")
-                .number
-                .expect("Finalized block must contain number")
-                .as_u32()
-                .into()
-        };
-
-        let latest = self
+    async fn finalized_l1_block_numbers(&self) -> Result<L1BlockNumber, ETHSenderError> {
+        // If use the sender's or the watcher's confirm config, it may affect the main process
+        const CONFIRMATIONS: u64 = 5;
+        let latest_block_number = self
             .eth_client
             .block_number("eth_tx_aggregator")
             .await?
-            .as_u32()
-            .into();
-        Ok(L1BlockNumbers { finalized, latest })
+            .as_u64();
+        Ok((latest_block_number.saturating_sub(CONFIRMATIONS) as u32).into())
     }
 
     async fn report_eth_tx_saving(
