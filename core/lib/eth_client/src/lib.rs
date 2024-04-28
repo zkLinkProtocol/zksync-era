@@ -77,6 +77,9 @@ pub trait EthInterface: 'static + Sync + Send + fmt::Debug {
     /// Call a contract without changing the state of the blockchain to estimate gas usage.
     async fn linea_estimate_gas(&self, req: CallRequest) -> Result<LineaEstimateGas, Error>;
 
+    /// Call a contract without changing the state of the blockchain to estimate gas usage.
+    async fn estimate_gas(&self, req: CallRequest) -> Result<U256, Error>;
+
     /// Fetches the transaction status for a specified transaction hash.
     ///
     /// Returns `Ok(None)` if the transaction is either not found or not executed yet.

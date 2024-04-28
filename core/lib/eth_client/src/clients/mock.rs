@@ -372,6 +372,10 @@ impl EthInterface for MockEthereum {
     async fn linea_estimate_gas(&self, _req: CallRequest) -> Result<LineaEstimateGas, Error> {
         unimplemented!("Not needed right now")
     }
+
+    async fn estimate_gas(&self, _req: CallRequest) -> Result<U256, Error> {
+        unimplemented!("Not needed right now")
+    }
 }
 
 #[async_trait::async_trait]

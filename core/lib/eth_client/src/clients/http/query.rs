@@ -306,4 +306,14 @@ impl EthInterface for QueryClient {
         latency.observe();
         Ok(res)
     }
+
+    async fn estimate_gas(&self, req: CallRequest) -> Result<U256, Error> {
+        let latency = LATENCIES.direct[&Method::EstimateGas].start();
+        let req = helpers::serialize(&req);
+
+        let res =
+            CallFuture::new(self.web3.transport().execute("eth_estimateGas", vec![req])).await?;
+        latency.observe();
+        Ok(res)
+    }
 }
