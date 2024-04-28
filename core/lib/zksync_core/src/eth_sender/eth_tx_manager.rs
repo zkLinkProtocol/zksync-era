@@ -186,30 +186,33 @@ impl EthTxManager {
         time_in_mempool: u32,
         current_block: L1BlockNumber,
     ) -> Result<H256, ETHSenderError> {
+        let call_request = zksync_types::web3::types::CallRequest::builder()
+            .from(self.ethereum_gateway.sender_account())
+            .to(tx.contract_address)
+            .data(tx.raw_tx.clone().into())
+            .build();
+
         const LINEA_TEST_CHAIN_ID: L1ChainId = L1ChainId(59141);
         const LINEA_MAINNET_CHAIN_ID: L1ChainId = L1ChainId(59144);
         let current_gate_way_chain_id = self.ethereum_gateway.chain_id();
-        let (base_fee_per_gas, priority_fee_per_gas) = if (current_gate_way_chain_id
+        let (gas_limit, base_fee_per_gas, priority_fee_per_gas) = if (current_gate_way_chain_id
             == LINEA_TEST_CHAIN_ID
             || current_gate_way_chain_id == LINEA_MAINNET_CHAIN_ID)
             && self.config.enable_linea_estimate_gas
         {
-            let call_request = zksync_types::web3::types::CallRequest::builder()
-                .from(self.ethereum_gateway.sender_account())
-                .to(tx.contract_address)
-                .data(tx.raw_tx.clone().into())
-                .build();
             let fee = self
                 .ethereum_gateway
                 .linea_estimate_gas(call_request)
                 .await?;
             (
+                fee.gas_limit,
                 fee.base_fee_per_gas.as_u64(),
                 fee.priority_fee_per_gas.as_u64(),
             )
         } else {
+            let gas_limit = self.ethereum_gateway.estimate_gas(call_request).await?;
             let fee = self.calculate_fee(storage, tx, time_in_mempool).await?;
-            (fee.base_fee_per_gas, fee.priority_fee_per_gas)
+            (gas_limit, fee.base_fee_per_gas, fee.priority_fee_per_gas)
         };
 
         METRICS.used_base_fee_per_gas.observe(base_fee_per_gas);
@@ -218,7 +221,7 @@ impl EthTxManager {
             .observe(priority_fee_per_gas);
 
         let signed_tx = self
-            .sign_tx(tx, base_fee_per_gas, priority_fee_per_gas)
+            .sign_tx(tx, gas_limit, base_fee_per_gas, priority_fee_per_gas)
             .await;
 
         if let Some(tx_history_id) = storage
@@ -405,6 +408,7 @@ impl EthTxManager {
     async fn sign_tx(
         &self,
         tx: &EthTx,
+        gas_limit: U256,
         base_fee_per_gas: u64,
         priority_fee_per_gas: u64,
     ) -> SignedCallResult {
@@ -414,7 +418,9 @@ impl EthTxManager {
                 tx.contract_address,
                 Options::with(|opt| {
                     // TODO Calculate gas for every operation SMA-1436
-                    opt.gas = Some(self.config.max_aggregated_tx_gas.into());
+                    opt.gas = Some(U256::from(
+                        (gas_limit.as_u64() as f64 * self.config.gas_scale_factor) as u64,
+                    ));
                     opt.max_fee_per_gas = Some(U256::from(base_fee_per_gas + priority_fee_per_gas));
                     opt.max_priority_fee_per_gas = Some(U256::from(priority_fee_per_gas));
                     opt.nonce = Some(tx.nonce.0.into());
