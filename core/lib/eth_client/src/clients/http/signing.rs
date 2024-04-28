@@ -197,6 +197,10 @@ impl<S: EthereumSigner> EthInterface for SigningClient<S> {
     async fn linea_estimate_gas(&self, req: CallRequest) -> Result<LineaEstimateGas, Error> {
         self.query_client.linea_estimate_gas(req).await
     }
+
+    async fn estimate_gas(&self, req: CallRequest) -> Result<U256, Error> {
+        self.query_client.estimate_gas(req).await
+    }
 }
 
 #[async_trait]

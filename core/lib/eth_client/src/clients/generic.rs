@@ -67,6 +67,10 @@ impl<C: EthInterface + ?Sized> EthInterface for Arc<C> {
         self.as_ref().linea_estimate_gas(req).await
     }
 
+    async fn estimate_gas(&self, req: CallRequest) -> Result<U256, Error> {
+        self.as_ref().estimate_gas(req).await
+    }
+
     async fn get_tx_status(
         &self,
         hash: H256,
