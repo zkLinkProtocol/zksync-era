@@ -418,7 +418,9 @@ impl EthTxManager {
                 tx.contract_address,
                 Options::with(|opt| {
                     // TODO Calculate gas for every operation SMA-1436
-                    opt.gas = Some(gas_limit);
+                    opt.gas = Some(U256::from(
+                        (gas_limit.as_u64() as f64 * self.config.gas_scale_factor) as u64,
+                    ));
                     opt.max_fee_per_gas = Some(U256::from(base_fee_per_gas + priority_fee_per_gas));
                     opt.max_priority_fee_per_gas = Some(U256::from(priority_fee_per_gas));
                     opt.nonce = Some(tx.nonce.0.into());

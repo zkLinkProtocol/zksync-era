@@ -26,6 +26,7 @@ impl FromEnv for GasAdjusterConfig {
 
 #[cfg(test)]
 mod tests {
+    use zksync_basic_types::U256;
     use zksync_config::configs::eth_sender::{ProofLoadingMode, ProofSendingMode};
 
     use super::*;
@@ -55,6 +56,7 @@ mod tests {
                 max_acceptable_priority_fee_in_gwei: 100_000_000_000,
                 proof_loading_mode: ProofLoadingMode::OldProofFromDb,
                 enable_linea_estimate_gas: false,
+                gas_scale_factor: 1.1f64,
             },
             gas_adjuster: GasAdjusterConfig {
                 default_priority_fee_per_gas: 20000000000,
@@ -95,6 +97,7 @@ mod tests {
             ETH_SENDER_SENDER_AGGREGATED_BLOCK_EXECUTE_DEADLINE="4000"
             ETH_SENDER_SENDER_TIMESTAMP_CRITERIA_MAX_ALLOWED_LAG="30"
             ETH_SENDER_SENDER_ENABLE_LINEA_ESTIMATE_GAS="false"
+            ETH_SENDER_SENDER_GAS_SCALE_FACTOR="1.1"
             ETH_SENDER_SENDER_MAX_AGGREGATED_TX_GAS="4000000"
             ETH_SENDER_SENDER_MAX_ETH_TX_DATA_SIZE="120000"
             ETH_SENDER_SENDER_L1_BATCH_MIN_AGE_BEFORE_EXECUTE_SECONDS="1000"
