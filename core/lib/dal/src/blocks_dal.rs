@@ -1365,6 +1365,7 @@ impl BlocksDal<'_, '_> {
                     WHERE
                         eth_prove_tx_id IS NOT NULL
                         AND eth_execute_tx_id IS NULL
+                        AND EXISTS (SELECT * FROM eth_txs WHERE tx_type = 'ExecuteBlocks' AND confirmed_eth_tx_history_id IS NULL)
                     ORDER BY
                         number
                     LIMIT
