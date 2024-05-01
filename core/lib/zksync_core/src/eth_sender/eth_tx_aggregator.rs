@@ -5,7 +5,6 @@ use zksync_config::configs::eth_sender::SenderConfig;
 use zksync_contracts::BaseSystemContractsHashes;
 use zksync_dal::{ConnectionPool, StorageProcessor};
 use zksync_eth_client::{BoundEthInterface, CallFunctionArgs, EthInterface};
-use zksync_types::web3::types::BlockId;
 use zksync_types::{
     aggregated_operations::{AggregatedOperation, L1BatchExecuteOperation},
     contracts::{Multicall3Call, Multicall3Result},
@@ -17,7 +16,7 @@ use zksync_types::{
         tokens::{Detokenize, Tokenizable},
         Error,
     },
-    Address, L1BlockNumber, ProtocolVersionId, H256, U256, U64,
+    Address, L1BlockNumber, ProtocolVersionId, H256, U256,
 };
 
 use crate::{
@@ -360,8 +359,12 @@ impl EthTxAggregator {
             .await
         {
             if if let AggregatedOperation::Execute(ref op) = agg_op {
-                tracing::info!("Query batches syncing status: {:?}", op.l1_batch_range());
-                self.is_batches_synced(op).await?
+                let is_synced = self.is_batches_synced(op).await?;
+                tracing::info!(
+                    "Queried Batches[{:?}] syncing status: {is_synced}",
+                    op.l1_batch_range()
+                );
+                is_synced
             } else {
                 true
             } {
@@ -383,13 +386,10 @@ impl EthTxAggregator {
         let is_batches_synced = &*self.functions.is_batches_synced.name;
 
         let params = op.get_eth_tx_args().pop().unwrap();
-        let block_number = self.finalized_l1_block_numbers().await?;
-        let args = CallFunctionArgs::new(is_batches_synced, params)
-            .with_block(BlockId::from(U64::from(block_number.0)))
-            .for_contract(
-                self.main_zksync_contract_address,
-                self.functions.zksync_contract.clone(),
-            );
+        let args = CallFunctionArgs::new(is_batches_synced, params).for_contract(
+            self.main_zksync_contract_address,
+            self.functions.zksync_contract.clone(),
+        );
         let res_tokens = self
             .eth_client
             .call_contract_function(args)
