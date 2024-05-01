@@ -398,6 +398,7 @@ impl EthTxAggregator {
         Ok(bool::from_tokens(res_tokens)?)
     }
 
+    #[allow(dead_code)]
     async fn finalized_l1_block_numbers(&self) -> Result<L1BlockNumber, ETHSenderError> {
         // If use the sender's or the watcher's confirm config, it may affect the main process
         const CONFIRMATIONS: u64 = 5;
