@@ -360,8 +360,9 @@ impl EthTxAggregator {
             .await
         {
             if if let AggregatedOperation::Execute(ref op) = agg_op {
-                tracing::info!("Query batches syncing status: {:?}", op.l1_batch_range());
-                self.is_batches_synced(op).await?
+                let is_synced = self.is_batches_synced(op).await?;
+                tracing::info!("Queried Batches[op.l1_batch_range()] syncing status: {:?}", is_synced);
+                is_synced
             } else {
                 true
             } {
@@ -383,9 +384,7 @@ impl EthTxAggregator {
         let is_batches_synced = &*self.functions.is_batches_synced.name;
 
         let params = op.get_eth_tx_args().pop().unwrap();
-        let block_number = self.finalized_l1_block_numbers().await?;
         let args = CallFunctionArgs::new(is_batches_synced, params)
-            .with_block(BlockId::from(U64::from(block_number.0)))
             .for_contract(
                 self.main_zksync_contract_address,
                 self.functions.zksync_contract.clone(),
