@@ -9125,6 +9125,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "jsonrpc-core",
+ "reqwest",
  "serde",
  "static_assertions",
  "thiserror",
