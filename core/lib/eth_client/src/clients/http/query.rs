@@ -41,7 +41,12 @@ impl From<Http> for QueryClient {
 impl QueryClient {
     /// Creates a new HTTP client.
     pub fn new(node_url: &str) -> Result<Self, Error> {
-        let transport = Http::new(node_url)?;
+        let builder = reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .expect("Failed to build http client!");
+        let transport = Http::with_client(builder, node_url.parse().unwrap());
         Ok(transport.into())
     }
 }
