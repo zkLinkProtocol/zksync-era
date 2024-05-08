@@ -21,6 +21,7 @@ serde = "1.0.90"
 thiserror = "1"
 async-trait = "0.1"
 tracing = "0.1"
+reqwest = "0.11.22"
 
 [dev-dependencies]
 static_assertions = "1.1.0"
