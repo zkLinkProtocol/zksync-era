@@ -45,7 +45,13 @@ impl PKSigningClient {
         let default_priority_fee_per_gas = eth_sender.gas_adjuster.default_priority_fee_per_gas;
         let l1_chain_id = eth_client.chain_id;
 
-        let transport = Http::new(main_node_url).expect("Failed to create transport");
+        let builder = reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .expect("Failed to build http client!");
+        let transport = Http::with_client(builder, main_node_url.parse().unwrap());
+
         let operator_address = PackedEthSignature::address_from_private_key(&operator_private_key)
             .expect("Failed to get address from private key");
 
