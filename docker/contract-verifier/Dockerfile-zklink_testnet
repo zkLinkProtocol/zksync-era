@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:experimental
-FROM debian:bookworm-slim as builder
+FROM 475911326710.dkr.ecr.ap-northeast-1.amazonaws.com/debian:bookworm-slim as builder
 
 RUN apt-get update && apt-get install -y curl clang openssl libssl-dev gcc g++ \
     pkg-config build-essential libclang-dev linux-libc-dev liburing-dev git && \
@@ -30,7 +30,7 @@ RUN zk && \
 
 RUN cargo build --release -p zksync_contract_verifier
 
-FROM debian:bookworm-slim
+FROM 475911326710.dkr.ecr.ap-northeast-1.amazonaws.com/debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y curl libpq5 ca-certificates wget python3 jq && rm -rf /var/lib/apt/lists/*
 
