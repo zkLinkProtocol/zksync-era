@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y nodejs npm && npm install --global yarn
 RUN cd /usr/src && \
     git clone https://github.com/zkLinkProtocol/zksync-era.git zksync && \
     cd zksync && \
-    git checkout -b zklink origin/zklink && \
-    git pull origin zklink && \
+    git checkout -b zklink_testnet origin/zklink_testnet && \
+    git pull origin zklink_testnet && \
     git submodule update --init --recursive
 
 WORKDIR /usr/src/zksync
