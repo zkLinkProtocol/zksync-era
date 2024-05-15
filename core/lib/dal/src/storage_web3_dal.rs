@@ -47,7 +47,17 @@ impl StorageWeb3Dal<'_, '_> {
 
     pub async fn get_is_address_blacklisted(&mut self, address: &[u8]) -> Result<bool, SqlxError> {
         let res = sqlx::query!(
-            r#"SELECT EXISTS(SELECT 1 FROM blacklist WHERE address = $1) AS exists"#,
+            r#"
+            SELECT
+                EXISTS (
+                    SELECT
+                        1
+                    FROM
+                        blacklist
+                    WHERE
+                        address = $1
+                ) AS EXISTS
+            "#,
             address
         )
         .instrument("is_address_blacklisted")
