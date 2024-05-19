@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use anyhow::Context as _;
-use tokio::sync::watch;
+use tokio::{sync::watch, time::sleep};
 use zksync_config::configs::eth_sender::SenderConfig;
 use zksync_dal::{ConnectionPool, StorageProcessor};
 use zksync_eth_client::{
@@ -237,7 +237,13 @@ impl EthTxManager {
             .unwrap()
         {
             if let Err(error) = self
-                .send_raw_transaction(storage, tx_history_id, signed_tx.raw_tx, current_block)
+                .send_raw_transaction(
+                    storage,
+                    tx_history_id,
+                    signed_tx.hash,
+                    signed_tx.raw_tx,
+                    current_block,
+                )
                 .await
             {
                 tracing::warn!(
@@ -257,6 +263,7 @@ impl EthTxManager {
         &self,
         storage: &mut StorageProcessor<'_>,
         tx_history_id: u32,
+        tx_hash: H256,
         raw_tx: RawTransactionBytes,
         current_block: L1BlockNumber,
     ) -> Result<H256, ETHSenderError> {
@@ -270,6 +277,27 @@ impl EthTxManager {
                 Ok(tx_hash)
             }
             Err(error) => {
+                // Query tx by tx hash to avoid connection error of rpc server
+                // that tx has been sent to node but client get error
+                let mut query_time = 0;
+                loop {
+                    query_time += 1;
+                    if query_time >= 12 {
+                        break;
+                    }
+                    match self
+                        .ethereum_gateway
+                        .get_tx(tx_hash, "eth_tx_manager")
+                        .await
+                    {
+                        Ok(tx) => match tx {
+                            None => {}
+                            Some(_) => return Ok(tx_hash),
+                        },
+                        Err(_) => {}
+                    }
+                    sleep(Duration::from_secs(5)).await;
+                }
                 storage
                     .eth_sender_dal()
                     .remove_tx_history(tx_history_id)
@@ -463,6 +491,7 @@ impl EthTxManager {
                 .send_raw_transaction(
                     storage,
                     tx.id,
+                    tx.tx_hash,
                     RawTransactionBytes::new_unchecked(tx.signed_raw_tx.clone()),
                     l1_block_numbers.latest,
                 )
