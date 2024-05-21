@@ -267,6 +267,7 @@ impl EthTxManager {
         raw_tx: RawTransactionBytes,
         current_block: L1BlockNumber,
     ) -> Result<H256, ETHSenderError> {
+        tracing::info!("Send raw transaction with tx hash: {:?}", tx_hash);
         match self.ethereum_gateway.send_raw_tx(raw_tx).await {
             Ok(tx_hash) => {
                 storage
@@ -277,6 +278,7 @@ impl EthTxManager {
                 Ok(tx_hash)
             }
             Err(error) => {
+                tracing::warn!("Send tx got error: {:?}", error);
                 // Query tx by tx hash to avoid connection error of rpc server
                 // that tx has been sent to node but client get error
                 let mut query_time = 0;
@@ -285,25 +287,34 @@ impl EthTxManager {
                     if query_time >= 12 {
                         break;
                     }
+                    tracing::info!("Query count: {:?}", query_time);
                     match self
                         .ethereum_gateway
                         .get_tx(tx_hash, "eth_tx_manager")
                         .await
                     {
                         Ok(tx) => match tx {
-                            None => {}
-                            Some(_) => return Ok(tx_hash),
+                            None => {
+                                tracing::warn!("Query return none");
+                            }
+                            Some(_) => {
+                                tracing::info!("Query tx hash success");
+                                return Ok(tx_hash);
+                            }
                         },
-                        Err(_) => {}
+                        Err(e) => {
+                            tracing::warn!("Query return error: {:?}", e);
+                        }
                     }
                     sleep(Duration::from_secs(5)).await;
                 }
-                storage
-                    .eth_sender_dal()
-                    .remove_tx_history(tx_history_id)
-                    .await
-                    .unwrap();
-                Err(error.into())
+                Ok(tx_hash)
+                // storage
+                //     .eth_sender_dal()
+                //     .remove_tx_history(tx_history_id)
+                //     .await
+                //     .unwrap();
+                // Err(error.into())
             }
         }
     }

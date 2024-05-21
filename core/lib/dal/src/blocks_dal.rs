@@ -1314,23 +1314,26 @@ impl BlocksDal<'_, '_> {
         max_l1_batch_timestamp_millis: Option<u64>,
     ) -> anyhow::Result<Vec<L1BatchWithMetadata>> {
         let exists_unconfirmed_execute_tx = sqlx::query!(
-            "SELECT EXISTS (
-                SELECT
-                    1
-                FROM
-                    eth_txs
-                WHERE
-                    tx_type = 'ExecuteBlocks'
-                    AND confirmed_eth_tx_history_id IS NULL
-            ) as exists"
+            r#"
+            SELECT
+                EXISTS (
+                    SELECT
+                        1
+                    FROM
+                        eth_txs
+                    WHERE
+                        tx_type = 'ExecuteBlocks'
+                        AND confirmed_eth_tx_history_id IS NULL
+                ) AS EXISTS
+            "#
         )
-            .instrument("get_ready_for_execute_l1_batches")
-            .fetch_one(self.storage.conn())
-            .await?
-            .exists
-            .unwrap_or(false);
+        .instrument("get_ready_for_execute_l1_batches")
+        .fetch_one(self.storage.conn())
+        .await?
+        .exists
+        .unwrap_or(false);
         if exists_unconfirmed_execute_tx {
-            return Ok(vec![])
+            return Ok(vec![]);
         }
 
         let raw_batches = match max_l1_batch_timestamp_millis {
