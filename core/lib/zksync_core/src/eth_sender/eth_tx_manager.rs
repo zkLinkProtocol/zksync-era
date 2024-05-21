@@ -267,7 +267,11 @@ impl EthTxManager {
         raw_tx: RawTransactionBytes,
         current_block: L1BlockNumber,
     ) -> Result<H256, ETHSenderError> {
-        tracing::info!("Send raw transaction with tx hash: {:?}", tx_hash);
+        tracing::info!(
+            "Send raw transaction with [tx history id: {:?}, tx hash: {:?}]",
+            tx_history_id,
+            tx_hash
+        );
         match self.ethereum_gateway.send_raw_tx(raw_tx).await {
             Ok(tx_hash) => {
                 storage
