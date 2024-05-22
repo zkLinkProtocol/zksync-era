@@ -662,7 +662,7 @@ impl EthTxManager {
         &mut self,
         storage: &mut StorageProcessor<'_>,
         current_block: L1BlockNumber,
-    ) {
+    ) -> Result<(), ETHSenderError> {
         let number_inflight_txs = storage
             .eth_sender_dal()
             .get_inflight_txs()
@@ -683,9 +683,11 @@ impl EthTxManager {
                 .unwrap();
 
             for tx in new_eth_tx {
-                let _ = self.send_eth_tx(storage, &tx, 0, current_block).await;
+                let _ = self.send_eth_tx(storage, &tx, 0, current_block).await?;
             }
         }
+
+        Ok(())
     }
 
     #[tracing::instrument(skip(self, storage))]
@@ -697,7 +699,7 @@ impl EthTxManager {
         let l1_block_numbers = self.get_l1_block_numbers().await?;
 
         self.send_new_eth_txs(storage, l1_block_numbers.latest)
-            .await;
+            .await?;
 
         if l1_block_numbers.latest <= previous_block {
             // Nothing to do - no new blocks were mined.
