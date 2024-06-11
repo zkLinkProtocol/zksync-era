@@ -495,7 +495,7 @@ impl EthNamespace {
         const METHOD_NAME: &str = "get_transaction_receipt";
 
         let method_latency = API_METRICS.start_call(METHOD_NAME);
-        let receipt = self
+        let mut receipt = self
             .state
             .connection_pool
             .access_storage_tagged("api")
@@ -505,6 +505,28 @@ impl EthNamespace {
             .get_transaction_receipt(hash)
             .await
             .map_err(|err| internal_error(METHOD_NAME, err));
+
+        // TODO: Wait for the vm bug to be fixed before deleting
+        // Temp: replace contract address with log's address
+        if let Ok(Some(rec)) = receipt.as_mut() {
+            if let Some(contract_addr) = rec.contract_address.as_mut() {
+                // If the contract address is correct, it does not need to be updated.
+                // We assume that if the current contract address is log.address
+                // then it is probable that it is a correct contract address
+                let is_correct_contract_addr =
+                    rec.logs.iter().any(|log| log.address == *contract_addr);
+                if !is_correct_contract_addr {
+                    // Otherwise, take the first log's address other than L2_ETH_TOKEN_ADDRESS.
+                    if let Some(log) = rec
+                        .logs
+                        .iter()
+                        .find(|log| log.address != L2_ETH_TOKEN_ADDRESS)
+                    {
+                        *contract_addr = log.address;
+                    }
+                }
+            }
+        }
 
         method_latency.observe();
         receipt
