@@ -1,13 +1,17 @@
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 use sqlx::types::chrono::Utc;
 use zksync_types::{
+    api,
     l2_to_l1_log::{L2ToL1Log, UserL2ToL1Log},
     tx::IncludedTxLocation,
     MiniblockNumber, VmEvent, H256,
 };
 
-use crate::{models::storage_event::StorageL2ToL1Log, SqlxError, StorageProcessor};
+use crate::{
+    models::storage_event::{StorageL2ToL1Log, StorageWeb3Log},
+    SqlxError, StorageProcessor,
+};
 
 /// Wrapper around an optional event topic allowing to hex-format it for `COPY` instructions.
 #[derive(Debug)]
@@ -182,11 +186,15 @@ impl EventsDal<'_, '_> {
         .unwrap();
     }
 
-    pub(crate) async fn l2_to_l1_logs(
+    pub(crate) async fn get_l2_to_l1_logs_by_hashes(
         &mut self,
-        tx_hash: H256,
-    ) -> Result<Vec<StorageL2ToL1Log>, SqlxError> {
-        sqlx::query_as!(
+        hashes: &[H256],
+    ) -> Result<HashMap<H256, Vec<api::L2ToL1Log>>, SqlxError> {
+        let hashes = &hashes
+            .iter()
+            .map(|hash| hash.as_bytes().to_vec())
+            .collect::<Vec<_>>();
+        let logs: Vec<StorageL2ToL1Log> = sqlx::query_as!(
             StorageL2ToL1Log,
             r#"
             SELECT
@@ -206,14 +214,72 @@ impl EventsDal<'_, '_> {
             FROM
                 l2_to_l1_logs
             WHERE
-                tx_hash = $1
+                tx_hash = ANY ($1)
             ORDER BY
+                tx_index_in_l1_batch ASC,
                 log_index_in_tx ASC
             "#,
-            tx_hash.as_bytes()
+            &hashes[..]
         )
         .fetch_all(self.storage.conn())
-        .await
+        .await?;
+
+        let mut result = HashMap::<H256, Vec<api::L2ToL1Log>>::new();
+        for storage_log in logs {
+            let current_log = api::L2ToL1Log::from(storage_log);
+            result
+                .entry(current_log.transaction_hash)
+                .or_default()
+                .push(current_log);
+        }
+        Ok(result)
+    }
+
+    pub(crate) async fn get_logs_by_tx_hashes(
+        &mut self,
+        hashes: &[H256],
+    ) -> Result<HashMap<H256, Vec<api::Log>>, SqlxError> {
+        let hashes = hashes
+            .iter()
+            .map(|hash| hash.as_bytes())
+            .collect::<Vec<_>>();
+        let logs: Vec<_> = sqlx::query_as!(
+            StorageWeb3Log,
+            r#"
+            SELECT
+                address,
+                topic1,
+                topic2,
+                topic3,
+                topic4,
+                value,
+                NULL::bytea AS "block_hash",
+                NULL::BIGINT AS "l1_batch_number?",
+                miniblock_number,
+                tx_hash,
+                tx_index_in_block,
+                event_index_in_block,
+                event_index_in_tx
+            FROM
+                events
+            WHERE
+                tx_hash = ANY ($1)
+            ORDER BY
+                miniblock_number ASC,
+                event_index_in_block ASC
+            "#,
+            &hashes[..] as &[&[u8]],
+        )
+        .fetch_all(self.storage.conn())
+        .await?;
+
+        let mut result = HashMap::<H256, Vec<api::Log>>::new();
+        for storage_log in logs {
+            let current_log = api::Log::from(storage_log);
+            let tx_hash = current_log.transaction_hash.unwrap();
+            result.entry(tx_hash).or_default().push(current_log);
+        }
+        Ok(result)
     }
 }
 
