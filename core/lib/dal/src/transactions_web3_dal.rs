@@ -1,18 +1,16 @@
 use sqlx::types::chrono::NaiveDateTime;
 use zksync_types::{
-    api, Address, L2ChainId, MiniblockNumber, Transaction, ACCOUNT_CODE_STORAGE_ADDRESS,
-    FAILED_CONTRACT_DEPLOYMENT_BYTECODE_HASH, H160, H256, U256, U64,
+    api, api::TransactionReceipt, event::DEPLOY_EVENT_SIGNATURE, Address, L2ChainId,
+    MiniblockNumber, Transaction, CONTRACT_DEPLOYER_ADDRESS, H256, U256,
 };
-use zksync_utils::{bigdecimal_to_u256, h256_to_account_address};
 
 use crate::{
     instrument::InstrumentExt,
     models::{
         storage_block::{bind_block_where_sql_params, web3_block_where_sql},
-        storage_event::StorageWeb3Log,
         storage_transaction::{
             extract_web3_transaction, web3_transaction_select_sql, StorageTransaction,
-            StorageTransactionDetails,
+            StorageTransactionDetails, StorageTransactionReceipt,
         },
     },
     SqlxError, StorageProcessor,
@@ -24,171 +22,109 @@ pub struct TransactionsWeb3Dal<'a, 'c> {
 }
 
 impl TransactionsWeb3Dal<'_, '_> {
-    pub async fn get_transaction_receipt(
+    pub async fn get_transaction_receipts(
         &mut self,
-        hash: H256,
-    ) -> Result<Option<api::TransactionReceipt>, SqlxError> {
-        {
-            let receipt = sqlx::query!(
-                r#"
-                WITH
-                    sl AS (
-                        SELECT
-                            *
-                        FROM
-                            storage_logs
-                        WHERE
-                            storage_logs.address = $1
-                            AND storage_logs.tx_hash = $2
-                        ORDER BY
-                            storage_logs.miniblock_number DESC,
-                            storage_logs.operation_number DESC
-                        LIMIT
-                            1
-                    )
-                SELECT
-                    transactions.hash AS tx_hash,
-                    transactions.index_in_block AS index_in_block,
-                    transactions.l1_batch_tx_index AS l1_batch_tx_index,
-                    transactions.miniblock_number AS "block_number!",
-                    transactions.error AS error,
-                    transactions.effective_gas_price AS effective_gas_price,
-                    transactions.initiator_address AS initiator_address,
-                    transactions.data -> 'to' AS "transfer_to?",
-                    transactions.data -> 'contractAddress' AS "execute_contract_address?",
-                    transactions.tx_format AS "tx_format?",
-                    transactions.refunded_gas AS refunded_gas,
-                    transactions.gas_limit AS gas_limit,
-                    miniblocks.hash AS "block_hash",
-                    miniblocks.l1_batch_number AS "l1_batch_number?",
-                    sl.key AS "contract_address?"
-                FROM
-                    transactions
-                    JOIN miniblocks ON miniblocks.number = transactions.miniblock_number
-                    LEFT JOIN sl ON sl.value != $3
-                WHERE
-                    transactions.hash = $2
-                "#,
-                ACCOUNT_CODE_STORAGE_ADDRESS.as_bytes(),
-                hash.as_bytes(),
-                FAILED_CONTRACT_DEPLOYMENT_BYTECODE_HASH.as_bytes()
-            )
-            .instrument("get_transaction_receipt")
-            .with_arg("hash", &hash)
-            .fetch_optional(self.storage.conn())
-            .await?
-            .map(|db_row| {
-                let status = db_row.error.map(|_| U64::zero()).unwrap_or_else(U64::one);
+        hashes: &[H256],
+    ) -> Result<Vec<TransactionReceipt>, SqlxError> {
+        let hash_bytes: Vec<_> = hashes.iter().map(H256::as_bytes).collect();
+        // Clarification for first part of the query(`WITH` clause):
+        // Looking for `ContractDeployed` event in the events table
+        // to find the address of deployed contract
+        let mut receipts: Vec<TransactionReceipt> = sqlx::query_as!(
+            StorageTransactionReceipt,
+            r#"
+            WITH
+                events AS (
+                    SELECT DISTINCT
+                        ON (events.tx_hash) *
+                    FROM
+                        events
+                    WHERE
+                        events.address = $1
+                        AND events.topic1 = $2
+                        AND events.tx_hash = ANY ($3)
+                    ORDER BY
+                        events.tx_hash,
+                        events.event_index_in_tx DESC
+                )
+            SELECT
+                transactions.hash AS tx_hash,
+                transactions.index_in_block AS index_in_block,
+                transactions.l1_batch_tx_index AS l1_batch_tx_index,
+                transactions.miniblock_number AS "block_number!",
+                transactions.error AS error,
+                transactions.effective_gas_price AS effective_gas_price,
+                transactions.initiator_address AS initiator_address,
+                transactions.data -> 'to' AS "transfer_to?",
+                transactions.data -> 'contractAddress' AS "execute_contract_address?",
+                transactions.tx_format AS "tx_format?",
+                transactions.refunded_gas AS refunded_gas,
+                transactions.gas_limit AS gas_limit,
+                miniblocks.hash AS "block_hash",
+                miniblocks.l1_batch_number AS "l1_batch_number?",
+                events.topic4 AS "contract_address?"
+            FROM
+                transactions
+                JOIN miniblocks ON miniblocks.number = transactions.miniblock_number
+                LEFT JOIN events ON events.tx_hash = transactions.hash
+            WHERE
+                transactions.hash = ANY ($3)
+                AND transactions.data != '{}'::jsonb
+            "#,
+            // ^ Filter out transactions with pruned data, which would lead to potentially incomplete / bogus
+            // transaction info.
+            CONTRACT_DEPLOYER_ADDRESS.as_bytes(),
+            DEPLOY_EVENT_SIGNATURE.as_bytes(),
+            &hash_bytes as &[&[u8]],
+        )
+        .instrument("get_transaction_receipts")
+        .with_arg("hashes.len", &hashes.len())
+        .fetch_optional(self.storage.conn())
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect();
 
-                let tx_type = db_row.tx_format.map(U64::from).unwrap_or_default();
-                let transaction_index = db_row.index_in_block.map(U64::from).unwrap_or_default();
+        let mut logs = self
+            .storage
+            .events_dal()
+            .get_logs_by_tx_hashes(hashes)
+            .await?;
 
-                let block_hash = H256::from_slice(&db_row.block_hash);
-                api::TransactionReceipt {
-                    transaction_hash: H256::from_slice(&db_row.tx_hash),
-                    transaction_index,
-                    block_hash,
-                    block_number: db_row.block_number.into(),
-                    l1_batch_tx_index: db_row.l1_batch_tx_index.map(U64::from),
-                    l1_batch_number: db_row.l1_batch_number.map(U64::from),
-                    from: H160::from_slice(&db_row.initiator_address),
-                    to: db_row
-                        .transfer_to
-                        .or(db_row.execute_contract_address)
-                        .map(|addr| {
-                            serde_json::from_value::<Address>(addr)
-                                .expect("invalid address value in the database")
-                        })
-                        // For better compatibility with various clients, we never return null.
-                        .or_else(|| Some(Address::default())),
-                    cumulative_gas_used: Default::default(), // TODO: Should be actually calculated (SMA-1183).
-                    gas_used: {
-                        let refunded_gas: U256 = db_row.refunded_gas.into();
-                        db_row.gas_limit.map(|val| {
-                            let gas_limit = bigdecimal_to_u256(val);
-                            gas_limit - refunded_gas
-                        })
-                    },
-                    effective_gas_price: Some(
-                        db_row
-                            .effective_gas_price
-                            .map(bigdecimal_to_u256)
-                            .unwrap_or_default(),
-                    ),
-                    contract_address: db_row
-                        .contract_address
-                        .map(|addr| h256_to_account_address(&H256::from_slice(&addr))),
-                    logs: vec![],
-                    l2_to_l1_logs: vec![],
-                    status,
-                    root: block_hash,
-                    logs_bloom: Default::default(),
-                    // Even though the Rust SDK recommends us to supply "None" for legacy transactions
-                    // we always supply some number anyway to have the same behavior as most popular RPCs
-                    transaction_type: Some(tx_type),
-                }
-            });
-            match receipt {
-                Some(mut receipt) => {
-                    let logs: Vec<_> = sqlx::query_as!(
-                        StorageWeb3Log,
-                        r#"
-                        SELECT
-                            address,
-                            topic1,
-                            topic2,
-                            topic3,
-                            topic4,
-                            value,
-                            NULL::bytea AS "block_hash",
-                            NULL::BIGINT AS "l1_batch_number?",
-                            miniblock_number,
-                            tx_hash,
-                            tx_index_in_block,
-                            event_index_in_block,
-                            event_index_in_tx
-                        FROM
-                            events
-                        WHERE
-                            tx_hash = $1
-                        ORDER BY
-                            miniblock_number ASC,
-                            event_index_in_block ASC
-                        "#,
-                        hash.as_bytes()
-                    )
-                    .instrument("get_transaction_receipt_events")
-                    .with_arg("hash", &hash)
-                    .fetch_all(self.storage.conn())
-                    .await?
+        let mut l2_to_l1_logs = self
+            .storage
+            .events_dal()
+            .get_l2_to_l1_logs_by_hashes(hashes)
+            .await?;
+
+        for receipt in receipts.iter_mut() {
+            let logs_for_tx = logs.remove(&receipt.transaction_hash);
+
+            if let Some(logs) = logs_for_tx {
+                receipt.logs = logs
                     .into_iter()
-                    .map(|storage_log| {
-                        let mut log = api::Log::from(storage_log);
+                    .map(|mut log| {
                         log.block_hash = Some(receipt.block_hash);
                         log.l1_batch_number = receipt.l1_batch_number;
                         log
                     })
                     .collect();
+            }
 
-                    receipt.logs = logs;
-
-                    let l2_to_l1_logs = self.storage.events_dal().l2_to_l1_logs(hash).await?;
-                    let l2_to_l1_logs: Vec<_> = l2_to_l1_logs
-                        .into_iter()
-                        .map(|storage_l2_to_l1_log| {
-                            let mut l2_to_l1_log = api::L2ToL1Log::from(storage_l2_to_l1_log);
-                            l2_to_l1_log.block_hash = Some(receipt.block_hash);
-                            l2_to_l1_log.l1_batch_number = receipt.l1_batch_number;
-                            l2_to_l1_log
-                        })
-                        .collect();
-                    receipt.l2_to_l1_logs = l2_to_l1_logs;
-
-                    Ok(Some(receipt))
-                }
-                None => Ok(None),
+            let l2_to_l1_logs_for_tx = l2_to_l1_logs.remove(&receipt.transaction_hash);
+            if let Some(l2_to_l1_logs) = l2_to_l1_logs_for_tx {
+                receipt.l2_to_l1_logs = l2_to_l1_logs
+                    .into_iter()
+                    .map(|mut log| {
+                        log.block_hash = Some(receipt.block_hash);
+                        log.l1_batch_number = receipt.l1_batch_number;
+                        log
+                    })
+                    .collect();
             }
         }
+
+        Ok(receipts)
     }
 
     pub async fn get_transaction(
