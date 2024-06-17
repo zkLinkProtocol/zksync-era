@@ -42,7 +42,7 @@ services:
       - POSTGRES_PASSWORD=changeme
       - PGPORT=5430
   external-node:
-    image: "zklinkprotocol/nova-external-node:v1.0"
+    image: "zklinkprotocol/nova-external-node:v1.1"
     ports:
       - "127.0.0.1:3060:3060"
       - "127.0.0.1:3061:3061"
@@ -62,7 +62,7 @@ services:
       EN_MAIN_NODE_URL: https://rpc.zklink.io
       EN_L1_CHAIN_ID: 59144
       EN_L2_CHAIN_ID: 810180
-
+      EN_API_NAMESPACES: "eth,web3,net,pubsub,zks,en,debug"
       EN_STATE_CACHE_PATH: "./db/ext-node/state_keeper"
       EN_MERKLE_TREE_PATH: "./db/ext-node/lightweight"
       RUST_LOG: "zksync_core=debug,zksync_dal=info,zksync_eth_client=info,zksync_merkle_tree=info,zksync_storage=info,zksync_state=debug,zksync_types=info,vm=info,zksync_external_node=info,zksync_utils=debug,zksync_snapshots_applier=info"
