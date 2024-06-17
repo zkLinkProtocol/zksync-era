@@ -502,12 +502,12 @@ impl EthNamespace {
             .await
             .unwrap()
             .transactions_web3_dal()
-            .get_transaction_receipt(hash)
+            .get_transaction_receipts(&[hash])
             .await
             .map_err(|err| internal_error(METHOD_NAME, err));
 
         method_latency.observe();
-        receipt
+        receipt.map(|r| r.into_iter().next())
     }
 
     #[tracing::instrument(skip(self))]
