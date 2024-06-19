@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use crate::api_server::tx_sender::SubmitTxError;
 use zksync_system_constants::DEFAULT_L2_TX_GAS_PER_PUBDATA_BYTE;
 use zksync_types::{
     api::{
@@ -104,15 +104,6 @@ impl EthNamespace {
     ) -> Result<U256, Web3Error> {
         const METHOD_NAME: &str = "estimate_gas";
 
-        if request.from
-            == Some(
-                zksync_types::Address::from_str("AFA859503D75E33553415bd8dC7b2702b2f73b65")
-                    .unwrap(),
-            )
-        {
-            return Ok(U256::zero());
-        }
-
         let method_latency = API_METRICS.start_call(METHOD_NAME);
         let mut request_with_gas_per_pubdata_overridden = request;
         self.state
@@ -153,12 +144,16 @@ impl EthNamespace {
         let acceptable_overestimation =
             self.state.api_config.estimate_gas_acceptable_overestimation;
 
-        let fee = self
+        let fee = match self
             .state
             .tx_sender
             .get_txs_fee_in_wei(tx.into(), scale_factor, acceptable_overestimation)
             .await
-            .map_err(|err| err.into_web3_error(METHOD_NAME))?;
+        {
+            Ok(fee) => fee,
+            Err(SubmitTxError::FromIsNotAnAccount) => return Ok(U256::zero()),
+            Err(err) => return Err(err.into_web3_error(METHOD_NAME)),
+        };
         method_latency.observe();
         Ok(fee.gas_limit)
     }
