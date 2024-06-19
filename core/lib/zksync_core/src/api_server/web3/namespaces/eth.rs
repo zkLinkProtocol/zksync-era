@@ -1,4 +1,3 @@
-use crate::api_server::tx_sender::SubmitTxError;
 use zksync_system_constants::DEFAULT_L2_TX_GAS_PER_PUBDATA_BYTE;
 use zksync_types::{
     api::{
@@ -18,11 +17,14 @@ use zksync_web3_decl::{
     types::{Address, Block, Filter, FilterChanges, Log, U64},
 };
 
-use crate::api_server::web3::{
-    backend_jsonrpsee::internal_error,
-    metrics::{BlockCallObserver, API_METRICS},
-    state::RpcState,
-    TypedFilter,
+use crate::api_server::{
+    tx_sender::SubmitTxError,
+    web3::{
+        backend_jsonrpsee::internal_error,
+        metrics::{BlockCallObserver, API_METRICS},
+        state::RpcState,
+        TypedFilter,
+    },
 };
 
 pub const EVENT_TOPIC_NUMBER_LIMIT: usize = 4;
