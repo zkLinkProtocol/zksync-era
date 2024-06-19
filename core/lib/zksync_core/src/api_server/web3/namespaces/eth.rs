@@ -18,11 +18,14 @@ use zksync_web3_decl::{
     types::{Address, Block, Filter, FilterChanges, Log, U64},
 };
 
-use crate::api_server::web3::{
-    backend_jsonrpsee::internal_error,
-    metrics::{BlockCallObserver, API_METRICS},
-    state::RpcState,
-    TypedFilter,
+use crate::api_server::{
+    tx_sender::SubmitTxError,
+    web3::{
+        backend_jsonrpsee::internal_error,
+        metrics::{BlockCallObserver, API_METRICS},
+        state::RpcState,
+        TypedFilter,
+    },
 };
 
 pub const EVENT_TOPIC_NUMBER_LIMIT: usize = 4;
@@ -153,12 +156,16 @@ impl EthNamespace {
         let acceptable_overestimation =
             self.state.api_config.estimate_gas_acceptable_overestimation;
 
-        let fee = self
+        let fee = match self
             .state
             .tx_sender
             .get_txs_fee_in_wei(tx.into(), scale_factor, acceptable_overestimation)
             .await
-            .map_err(|err| err.into_web3_error(METHOD_NAME))?;
+        {
+            Ok(fee) => fee,
+            Err(SubmitTxError::FromIsNotAnAccount) => return Ok(U256::zero()),
+            Err(err) => return Err(err.into_web3_error(METHOD_NAME)),
+        };
         method_latency.observe();
         Ok(fee.gas_limit)
     }
