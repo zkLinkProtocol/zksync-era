@@ -42,7 +42,7 @@ services:
       - POSTGRES_PASSWORD=changeme
       - PGPORT=5430
   external-node:
-    image: "zklinkprotocol/nova-external-node:v1.1"
+    image: "zklinkprotocol/nova-external-node:v1.2"
     ports:
       - "127.0.0.1:3060:3060"
       - "127.0.0.1:3061:3061"
