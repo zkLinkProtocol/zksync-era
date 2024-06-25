@@ -252,7 +252,7 @@ impl FeeParams {
     pub fn sensible_v1_default() -> Self {
         Self::V1(FeeParamsV1 {
             config: FeeModelConfigV1 {
-                minimal_l2_gas_price: 100_000_000,
+                minimal_l2_gas_price: 125_000_000,
             },
             l1_gas_price: 1_000_000_000,
         })
