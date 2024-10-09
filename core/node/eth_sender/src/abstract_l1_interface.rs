@@ -192,6 +192,7 @@ impl AbstractL1Interface for RealL1Interface {
                     opt.gas = Some(U256::from(
                         (max_aggregated_tx_gas.as_u64() as f64 * self.gas_scale_factor) as u64,
                     ));
+                    tracing::info!("base_fee_per_gas: {base_fee_per_gas}, priority_fee_per_gas: {priority_fee_per_gas}");
                     opt.max_fee_per_gas = Some(U256::from(base_fee_per_gas + priority_fee_per_gas));
                     opt.max_priority_fee_per_gas = Some(U256::from(priority_fee_per_gas));
                     opt.nonce = Some(tx.nonce.0.into());
@@ -208,6 +209,7 @@ impl AbstractL1Interface for RealL1Interface {
                             .map(|blob| H256::from_slice(&blob.versioned_hash))
                             .collect(),
                     });
+                    tracing::info!("tx opt: {:?}", opt);
                 }),
             )
             .await
